@@ -1,0 +1,79 @@
+[
+    {
+        "model": "core.pythonconcept",
+        "pk": 1,
+        "fields": {
+            "name": "Print Statement",
+            "description": "The print() function displays output to the console. It's the most basic way to see results in Python.",
+            "difficulty": "beginner",
+            "syntax_example": "print('Hello, World!')\nprint(f'Damage dealt: {damage}')",
+            "documentation_link": "https://docs.python.org/3/library/functions.html#print"
+        }
+    },
+    {
+        "model": "core.pythonconcept",
+        "pk": 2,
+        "fields": {
+            "name": "Variables",
+            "description": "Variables store values that can be used and modified throughout your code.",
+            "difficulty": "beginner",
+            "syntax_example": "damage = 10\nplayer_name = 'Hero'\nhp_remaining = 100 - damage",
+            "documentation_link": "https://docs.python.org/3/tutorial/introduction.html#using-python-as-a-calculator"
+        }
+    },
+    {
+        "model": "core.pythonconcept",
+        "pk": 3,
+        "fields": {
+            "name": "For Loop",
+            "description": "For loops repeat actions a specific number of times or iterate over sequences.",
+            "difficulty": "beginner",
+            "syntax_example": "for i in range(3):\n    print(f'Attack {i+1}!')\n    damage += 5",
+            "documentation_link": "https://docs.python.org/3/tutorial/controlflow.html#for-statements"
+        }
+    },
+    {
+        "model": "core.pythonconcept",
+        "pk": 4,
+        "fields": {
+            "name": "If Statement",
+            "description": "If statements allow code to make decisions based on conditions.",
+            "difficulty": "beginner",
+            "syntax_example": "if enemy.hp < 20:\n    damage *= 2  # Critical hit!\nelse:\n    damage = 10",
+            "documentation_link": "https://docs.python.org/3/tutorial/controlflow.html#if-statements"
+        }
+    },
+    {
+        "model": "core.pythonconcept",
+        "pk": 5,
+        "fields": {
+            "name": "Functions",
+            "description": "Functions are reusable blocks of code that perform specific tasks.",
+            "difficulty": "intermediate",
+            "syntax_example": "def calculate_damage(attack, defense):\n    return max(1, attack - defense)\n\ndamage = calculate_damage(25, 10)",
+            "documentation_link": "https://docs.python.org/3/tutorial/controlflow.html#defining-functions"
+        }
+    },
+    {
+        "model": "core.pythonconcept",
+        "pk": 6,
+        "fields": {
+            "name": "Lists",
+            "description": "Lists are ordered collections that can store multiple items.",
+            "difficulty": "intermediate",
+            "syntax_example": "targets = [enemy1, enemy2, enemy3]\nfor target in targets:\n    target.take_damage(10)",
+            "documentation_link": "https://docs.python.org/3/tutorial/datastructures.html#more-on-lists"
+        }
+    },
+    {
+        "model": "core.pythonconcept",
+        "pk": 7,
+        "fields": {
+            "name": "Classes",
+            "description": "Classes define blueprints for creating objects with attributes and methods.",
+            "difficulty": "advanced",
+            "syntax_example": "class Spell:\n    def __init__(self, name, damage):\n        self.name = name\n        self.damage = damage\n    \n    def cast(self, target):\n        target.hp -= self.damage",
+            "documentation_link": "https://docs.python.org/3/tutorial/classes.html"
+        }
+    }
+]

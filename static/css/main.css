@@ -1,0 +1,306 @@
+/* Chronicles of Py - Main Stylesheet */
+
+:root {
+    --primary-color: #2c3e50;
+    --secondary-color: #3498db;
+    --success-color: #27ae60;
+    --danger-color: #e74c3c;
+    --warning-color: #f39c12;
+    --info-color: #16a085;
+    --dark-bg: #1a1a2e;
+    --light-bg: #eee;
+}
+
+body {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+main {
+    flex: 1;
+}
+
+/* Game Interface Styles */
+.game-container {
+    background-color: var(--dark-bg);
+    color: white;
+    border-radius: 8px;
+    padding: 20px;
+    min-height: 600px;
+}
+
+.battle-screen {
+    position: relative;
+    background-image: linear-gradient(to bottom, #87CEEB 0%, #87CEEB 60%, #98D98E 60%, #98D98E 100%);
+    border-radius: 8px;
+    padding: 20px;
+    min-height: 400px;
+}
+
+.character-sprite {
+    width: 64px;
+    height: 64px;
+    image-rendering: pixelated;
+    transition: all 0.3s ease;
+}
+
+.character-sprite.player {
+    position: absolute;
+    bottom: 100px;
+    left: 100px;
+}
+
+.character-sprite.enemy {
+    position: absolute;
+    bottom: 100px;
+    right: 100px;
+}
+
+/* HP/MP Bars */
+.stat-bar {
+    background-color: #333;
+    border-radius: 4px;
+    height: 20px;
+    position: relative;
+    overflow: hidden;
+}
+
+.stat-bar-fill {
+    height: 100%;
+    transition: width 0.3s ease;
+}
+
+.hp-bar .stat-bar-fill {
+    background-color: var(--success-color);
+}
+
+.mp-bar .stat-bar-fill {
+    background-color: var(--info-color);
+}
+
+.stat-bar-text {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 12px;
+    font-weight: bold;
+}
+
+/* Code Editor */
+.code-editor {
+    background-color: #2d2d2d;
+    border-radius: 8px;
+    padding: 15px;
+    font-family: 'Consolas', 'Monaco', monospace;
+}
+
+.code-editor textarea {
+    width: 100%;
+    min-height: 200px;
+    background-color: #1e1e1e;
+    color: #d4d4d4;
+    border: none;
+    border-radius: 4px;
+    padding: 10px;
+    font-family: inherit;
+    font-size: 14px;
+    resize: vertical;
+}
+
+/* Battle Log */
+.battle-log {
+    background-color: rgba(0, 0, 0, 0.7);
+    border-radius: 4px;
+    padding: 10px;
+    max-height: 200px;
+    overflow-y: auto;
+    font-size: 14px;
+}
+
+.battle-log-entry {
+    padding: 4px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.battle-log-entry.damage {
+    color: #ff6b6b;
+}
+
+.battle-log-entry.healing {
+    color: #51cf66;
+}
+
+.battle-log-entry.info {
+    color: #74b9ff;
+}
+
+/* Skill Buttons */
+.skill-btn {
+    background-color: var(--secondary-color);
+    border: none;
+    border-radius: 4px;
+    color: white;
+    padding: 10px 20px;
+    margin: 5px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.skill-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.skill-btn:disabled {
+    background-color: #555;
+    cursor: not-allowed;
+    transform: none;
+}
+
+/* Lesson Cards */
+.lesson-card {
+    background-color: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    padding: 20px;
+    margin-bottom: 20px;
+    transition: all 0.3s ease;
+}
+
+.lesson-card:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    transform: translateY(-2px);
+}
+
+.lesson-progress {
+    background-color: #e9ecef;
+    border-radius: 20px;
+    height: 10px;
+    margin-top: 10px;
+}
+
+.lesson-progress-bar {
+    background-color: var(--success-color);
+    border-radius: 20px;
+    height: 100%;
+    transition: width 0.3s ease;
+}
+
+/* Inventory Grid */
+.inventory-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(64px, 1fr));
+    gap: 8px;
+}
+
+.inventory-slot {
+    width: 64px;
+    height: 64px;
+    background-color: rgba(255, 255, 255, 0.1);
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    position: relative;
+}
+
+.inventory-slot:hover {
+    background-color: rgba(255, 255, 255, 0.2);
+    border-color: rgba(255, 255, 255, 0.4);
+}
+
+.inventory-count {
+    position: absolute;
+    bottom: 2px;
+    right: 2px;
+    background-color: rgba(0, 0, 0, 0.8);
+    color: white;
+    font-size: 12px;
+    padding: 2px 4px;
+    border-radius: 2px;
+}
+
+/* Dialogue Box */
+.dialogue-box {
+    background-color: rgba(0, 0, 0, 0.9);
+    border: 2px solid white;
+    border-radius: 8px;
+    padding: 20px;
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 90%;
+    max-width: 600px;
+    z-index: 1000;
+}
+
+.dialogue-speaker {
+    font-weight: bold;
+    color: var(--warning-color);
+    margin-bottom: 10px;
+}
+
+.dialogue-text {
+    line-height: 1.6;
+}
+
+/* Map View */
+.map-container {
+    position: relative;
+    background-color: #f4e4c1;
+    border-radius: 8px;
+    padding: 20px;
+    min-height: 500px;
+}
+
+.location-marker {
+    position: absolute;
+    width: 32px;
+    height: 32px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.location-marker:hover {
+    transform: scale(1.2);
+}
+
+.location-marker.current {
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+    100% { transform: scale(1); }
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .battle-screen {
+        min-height: 300px;
+    }
+    
+    .character-sprite.player {
+        left: 20px;
+    }
+    
+    .character-sprite.enemy {
+        right: 20px;
+    }
+    
+    .inventory-grid {
+        grid-template-columns: repeat(auto-fill, minmax(48px, 1fr));
+    }
+    
+    .inventory-slot {
+        width: 48px;
+        height: 48px;
+    }
+}

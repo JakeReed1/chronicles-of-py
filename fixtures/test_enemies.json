@@ -1,0 +1,81 @@
+[
+    {
+        "model": "battles.elementtype",
+        "pk": 1,
+        "fields": {
+            "name": "Normal",
+            "color_hex": "#999999",
+            "icon_name": "normal.png"
+        }
+    },
+    {
+        "model": "battles.elementtype",
+        "pk": 2,
+        "fields": {
+            "name": "Fire",
+            "color_hex": "#FF4500",
+            "icon_name": "fire.png"
+        }
+    },
+    {
+        "model": "battles.elementtype",
+        "pk": 3,
+        "fields": {
+            "name": "Water",
+            "color_hex": "#4169E1",
+            "icon_name": "water.png"
+        }
+    },
+    {
+        "model": "characters.enemy",
+        "pk": 1,
+        "fields": {
+            "created_at": "2025-09-25T00:00:00Z",
+            "updated_at": "2025-09-25T00:00:00Z",
+            "name": "Code Goblin",
+            "level": 1,
+            "max_hp": 50,
+            "current_hp": 50,
+            "max_mp": 10,
+            "current_mp": 10,
+            "attack": 8,
+            "defense": 3,
+            "magic_attack": 5,
+            "magic_defense": 2,
+            "speed": 8,
+            "sprite_name": "goblin.png",
+            "portrait_name": "goblin_portrait.png",
+            "experience_reward": 15,
+            "gold_reward": 10,
+            "ai_type": "aggressive",
+            "skill_weights": {"attack": 0.8, "defend": 0.2},
+            "teaches_concept": 1
+        }
+    },
+    {
+        "model": "characters.enemy",
+        "pk": 2,
+        "fields": {
+            "created_at": "2025-09-25T00:00:00Z",
+            "updated_at": "2025-09-25T00:00:00Z",
+            "name": "Bug Sprite",
+            "level": 2,
+            "max_hp": 60,
+            "current_hp": 60,
+            "max_mp": 20,
+            "current_mp": 20,
+            "attack": 10,
+            "defense": 4,
+            "magic_attack": 8,
+            "magic_defense": 3,
+            "speed": 12,
+            "sprite_name": "bug_sprite.png",
+            "portrait_name": "bug_sprite_portrait.png",
+            "experience_reward": 25,
+            "gold_reward": 15,
+            "ai_type": "balanced",
+            "skill_weights": {"attack": 0.6, "skill": 0.3, "defend": 0.1},
+            "teaches_concept": 2
+        }
+    }
+]

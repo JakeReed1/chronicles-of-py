@@ -1,0 +1,102 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ game_title }} - Home{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-8 mx-auto text-center">
+        <h1 class="display-4 mb-4">Welcome to {{ game_title }}</h1>
+        <p class="lead">Learn Python programming through an epic RPG adventure!</p>
+        
+        <div class="hero-image my-5">
+            <img src="/static/images/hero-placeholder.png" alt="Game Hero" class="img-fluid" style="max-height: 400px;">
+        </div>
+        
+        <div class="features-grid row mt-5">
+            <div class="col-md-4 mb-4">
+                <div class="card h-100">
+                    <div class="card-body text-center">
+                        <h5 class="card-title">⚔️ Battle System</h5>
+                        <p class="card-text">Write Python code to cast spells and defeat enemies</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 mb-4">
+                <div class="card h-100">
+                    <div class="card-body text-center">
+                        <h5 class="card-title">📚 Learn by Doing</h5>
+                        <p class="card-text">Master Python concepts through interactive gameplay</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 mb-4">
+                <div class="card h-100">
+                    <div class="card-body text-center">
+                        <h5 class="card-title">🌟 Progress & Level Up</h5>
+                        <p class="card-text">Unlock new abilities as you learn advanced concepts</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        {% if user.is_authenticated %}
+            <a href="/battles/" class="btn btn-primary btn-lg mt-4">Continue Adventure</a>
+        {% else %}
+            <div class="mt-4">
+                <a href="/admin/" class="btn btn-primary btn-lg me-3">Start Your Journey</a>
+                <a href="/admin/login/" class="btn btn-outline-primary btn-lg">Login</a>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<div class="row mt-5">
+    <div class="col-lg-10 mx-auto">
+        <h2 class="text-center mb-4">How It Works</h2>
+        
+        <div class="accordion" id="howItWorksAccordion">
+            <div class="accordion-item">
+                <h2 class="accordion-header">
+                    <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapseOne">
+                        1. Start with the Basics
+                    </button>
+                </h2>
+                <div id="collapseOne" class="accordion-collapse collapse show" data-bs-parent="#howItWorksAccordion">
+                    <div class="accordion-body">
+                        Begin your journey on Tutorial Island where you'll learn basic Python syntax like print statements, 
+                        variables, and simple operations. These form the foundation of your magical abilities!
+                    </div>
+                </div>
+            </div>
+            
+            <div class="accordion-item">
+                <h2 class="accordion-header">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseTwo">
+                        2. Battle with Code
+                    </button>
+                </h2>
+                <div id="collapseTwo" class="accordion-collapse collapse" data-bs-parent="#howItWorksAccordion">
+                    <div class="accordion-body">
+                        In battles, you'll write Python code to attack enemies. Use loops for multi-hit attacks, 
+                        conditionals for strategic decisions, and functions for powerful spells!
+                    </div>
+                </div>
+            </div>
+            
+            <div class="accordion-item">
+                <h2 class="accordion-header">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseThree">
+                        3. Progress and Master
+                    </button>
+                </h2>
+                <div id="collapseThree" class="accordion-collapse collapse" data-bs-parent="#howItWorksAccordion">
+                    <div class="accordion-body">
+                        As you defeat enemies and complete quests, you'll unlock more advanced Python concepts like 
+                        classes, decorators, and async programming. Each new skill makes you more powerful in battle!
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,45 @@
+name: chronicles_of_py
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.11
+  - pip
+  - postgresql
+  - redis
+  - pip:
+      # Core Django
+      - Django==5.0.1
+      - djangorestframework==3.14.0
+      - django-cors-headers==4.3.1
+      - django-environ==0.11.2
+      
+      # Database
+      - psycopg2-binary==2.9.9
+      
+      # Code execution safety
+      - RestrictedPython==7.0
+      
+      # Code editor support
+      - django-ace==1.32.4
+      
+      # Authentication
+      - djangorestframework-simplejwt==5.3.1
+      
+      # Testing
+      - pytest==7.4.4
+      - pytest-django==4.7.0
+      
+      # Development
+      - django-extensions==3.2.3
+      - ipython==8.19.0
+      
+      # Production
+      - gunicorn==21.2.0
+      - whitenoise==6.6.0
+      
+      # Task queue (for async code evaluation)
+      - celery==5.3.5
+      
+      # Code syntax highlighting
+      - pygments==2.17.2
