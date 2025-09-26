@@ -1,0 +1,202 @@
+[
+  {
+    "model": "lessons.lessoncategory",
+    "pk": 1,
+    "fields": {
+      "name": "Basics",
+      "description": "Fundamental Python concepts",
+      "order": 1,
+      "icon": "bi-book"
+    }
+  },
+  {
+    "model": "lessons.lessoncategory",
+    "pk": 2,
+    "fields": {
+      "name": "Data Types",
+      "description": "Working with different data types",
+      "order": 2,
+      "icon": "bi-collection"
+    }
+  },
+  {
+    "model": "lessons.lesson",
+    "pk": 1,
+    "fields": {
+      "created_at": "2025-01-01T00:00:00Z",
+      "updated_at": "2025-01-01T00:00:00Z",
+      "category": 1,
+      "concept": 1,
+      "title": "Your First Python Program",
+      "description": "Learn how to write and run your first Python program using print statements",
+      "difficulty": "beginner",
+      "order": 1,
+      "introduction": "Welcome to Python! In this lesson, you'll learn how to display text using the print() function - the most basic but essential tool in Python.",
+      "content_sections": [],
+      "example_code": "# This is a comment - Python ignores it\nprint('Hello, World!')\nprint('Welcome to Python!')\n\n# You can print numbers too\nprint(42)\nprint(3.14)",
+      "starter_code": "# Write your first Python program below\n# Use print() to display a message\n",
+      "solution_code": "print('Hello, World!')",
+      "prerequisite_lessons": [],
+      "required_level": 1,
+      "experience_reward": 50,
+      "unlocks_skills": [],
+      "unlocks_items": []
+    }
+  },
+  {
+    "model": "lessons.lesson",
+    "pk": 2,
+    "fields": {
+      "created_at": "2025-01-01T00:00:00Z",
+      "updated_at": "2025-01-01T00:00:00Z",
+      "category": 1,
+      "concept": 2,
+      "title": "Variables and Values",
+      "description": "Discover how to store and use data with variables",
+      "difficulty": "beginner",
+      "order": 2,
+      "introduction": "Variables are like labeled boxes where you can store values. They're fundamental to programming!",
+      "content_sections": [],
+      "example_code": "# Creating variables\nname = 'Hero'\nhealth = 100\nlevel = 1\n\n# Using variables\nprint(name)\nprint('Health:', health)\nprint('Level:', level)\n\n# Changing values\nlevel = 2\nprint('New level:', level)",
+      "starter_code": "# Create a variable called 'player_name' and set it to your name\n# Then print a greeting using that variable\n",
+      "solution_code": "player_name = 'Alice'\nprint('Welcome,', player_name)",
+      "prerequisite_lessons": [1],
+      "required_level": 1,
+      "experience_reward": 60,
+      "unlocks_skills": [],
+      "unlocks_items": []
+    }
+  },
+  {
+    "model": "lessons.challenge",
+    "pk": 1,
+    "fields": {
+      "created_at": "2025-01-01T00:00:00Z",
+      "updated_at": "2025-01-01T00:00:00Z",
+      "lesson": 1,
+      "title": "Hello World",
+      "description": "Write a program that prints 'Hello, World!'",
+      "difficulty": 1,
+      "order": 1,
+      "problem_statement": "Your first challenge is simple: use the print() function to display the text 'Hello, World!' exactly as shown (including the comma and exclamation mark).",
+      "starter_code": "# Write your code below\n",
+      "test_cases": [
+        {
+          "input": "",
+          "expected_output": "Hello, World!",
+          "description": "Should print Hello, World!"
+        }
+      ],
+      "hidden_test_cases": [],
+      "expected_output": {"output": "Hello, World!"},
+      "experience_reward": 25,
+      "gold_reward": 10,
+      "required_concepts": [],
+      "forbidden_concepts": []
+    }
+  },
+  {
+    "model": "lessons.challenge",
+    "pk": 2,
+    "fields": {
+      "created_at": "2025-01-01T00:00:00Z",
+      "updated_at": "2025-01-01T00:00:00Z",
+      "lesson": 1,
+      "title": "Multiple Messages",
+      "description": "Print multiple lines of text",
+      "difficulty": 1,
+      "order": 2,
+      "problem_statement": "Use multiple print() statements to display:\n1. 'Welcome to Python!'\n2. 'Let's learn together!'\n3. 'This is fun!'",
+      "starter_code": "# Print three messages, one per line\n",
+      "test_cases": [
+        {
+          "input": "",
+          "expected_output": "Welcome to Python!\nLet's learn together!\nThis is fun!",
+          "description": "Should print three lines"
+        }
+      ],
+      "hidden_test_cases": [],
+      "expected_output": {"output": "Welcome to Python!\nLet's learn together!\nThis is fun!"},
+      "experience_reward": 30,
+      "gold_reward": 15,
+      "required_concepts": [],
+      "forbidden_concepts": []
+    }
+  },
+  {
+    "model": "lessons.challenge",
+    "pk": 3,
+    "fields": {
+      "created_at": "2025-01-01T00:00:00Z",
+      "updated_at": "2025-01-01T00:00:00Z",
+      "lesson": 2,
+      "title": "Create a Character",
+      "description": "Create variables for a game character",
+      "difficulty": 1,
+      "order": 1,
+      "problem_statement": "Create three variables:\n- 'name' with value 'Knight'\n- 'health' with value 100\n- 'damage' with value 25\nThen print each variable.",
+      "starter_code": "# Create your character variables\n\n# Print the character info\n",
+      "test_cases": [
+        {
+          "input": "",
+          "expected_output": "Knight\n100\n25",
+          "description": "Should create and print character stats"
+        }
+      ],
+      "hidden_test_cases": [],
+      "expected_output": {"output": "Knight\n100\n25"},
+      "experience_reward": 35,
+      "gold_reward": 20,
+      "required_concepts": [],
+      "forbidden_concepts": []
+    }
+  },
+  {
+    "model": "lessons.hint",
+    "pk": 1,
+    "fields": {
+      "content": "Remember to use the print() function. It looks like: print('your text here')",
+      "order": 1,
+      "concept": null,
+      "lesson": null,
+      "challenge": 1,
+      "gold_cost": 5
+    }
+  },
+  {
+    "model": "lessons.hint",
+    "pk": 2,
+    "fields": {
+      "content": "Make sure to include the comma and exclamation mark: print('Hello, World!')",
+      "order": 2,
+      "concept": null,
+      "lesson": null,
+      "challenge": 1,
+      "gold_cost": 5
+    }
+  },
+  {
+    "model": "lessons.hint",
+    "pk": 3,
+    "fields": {
+      "content": "You need three separate print() statements, one for each message",
+      "order": 1,
+      "concept": null,
+      "lesson": null,
+      "challenge": 2,
+      "gold_cost": 5
+    }
+  },
+  {
+    "model": "lessons.hint",
+    "pk": 4,
+    "fields": {
+      "content": "Variables are created with the = sign. For example: name = 'Knight'",
+      "order": 1,
+      "concept": null,
+      "lesson": null,
+      "challenge": 3,
+      "gold_cost": 5
+    }
+  }
+]

@@ -20,11 +20,18 @@ class LessonCategory(models.Model):
 
 class Lesson(TimestampedModel):
     """Educational lessons teaching Python concepts"""
+    DIFFICULTY_CHOICES = [
+        ('beginner', 'Beginner'),
+        ('intermediate', 'Intermediate'),
+        ('advanced', 'Advanced'),
+    ]
+    
     category = models.ForeignKey(LessonCategory, on_delete=models.CASCADE, related_name='lessons')
     concept = models.ForeignKey(PythonConcept, on_delete=models.CASCADE, related_name='lessons')
     
     title = models.CharField(max_length=200)
     description = models.TextField()
+    difficulty = models.CharField(max_length=20, choices=DIFFICULTY_CHOICES, default='beginner')
     order = models.IntegerField(default=0)
     
     # Content
@@ -61,6 +68,29 @@ class Lesson(TimestampedModel):
     
     def __str__(self):
         return f"{self.title} ({self.concept.name})"
+    
+    def get_difficulty_color(self):
+        """Get Bootstrap color for difficulty level"""
+        colors = {
+            'beginner': 'success',
+            'intermediate': 'warning',
+            'advanced': 'danger'
+        }
+        return colors.get(self.difficulty, 'secondary')
+    
+    @property
+    def content(self):
+        """Get formatted content for display"""
+        # For now, return introduction + example code
+        content = self.introduction
+        if self.example_code:
+            content += f'\n\n<pre><code class="language-python">{self.example_code}</code></pre>'
+        return content
+    
+    @property
+    def code_examples(self):
+        """Get code examples"""
+        return self.example_code
 
 
 class Challenge(TimestampedModel):
@@ -70,6 +100,7 @@ class Challenge(TimestampedModel):
     title = models.CharField(max_length=200)
     description = models.TextField()
     difficulty = models.IntegerField(default=1)  # 1-5 stars
+    order = models.IntegerField(default=0)
     
     # Challenge specifics
     problem_statement = models.TextField()
@@ -93,10 +124,13 @@ class Challenge(TimestampedModel):
         related_name='forbidden_in_challenges'
     )
     
-    # Hints system
-    hints = models.JSONField(
-        default=list,
-        help_text="List of hints revealed progressively"
+    # Hints are now handled via the Hint model with ForeignKey relationship
+    
+    # Expected output for validation
+    expected_output = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text="Expected output for automatic validation"
     )
     
     # Rewards
@@ -117,12 +151,14 @@ class PlayerLessonProgress(TimestampedModel):
     
     # Progress tracking
     is_completed = models.BooleanField(default=False)
+    is_unlocked = models.BooleanField(default=False)
     completion_date = models.DateTimeField(null=True, blank=True)
     time_spent = models.IntegerField(default=0)  # Seconds
     
     # Performance
     score = models.IntegerField(default=0)  # 0-100
     attempts = models.IntegerField(default=0)
+    completed_challenges = models.JSONField(default=list)  # List of challenge IDs
     
     # Section progress
     completed_sections = models.JSONField(default=list)
@@ -135,6 +171,24 @@ class PlayerLessonProgress(TimestampedModel):
     
     def __str__(self):
         return f"{self.player.name} - {self.lesson.title} ({self.score}%)"
+    
+    @property
+    def completion_percentage(self):
+        """Calculate completion percentage based on challenges"""
+        total_challenges = self.lesson.challenges.count()
+        if total_challenges == 0:
+            return 100 if self.is_completed else 0
+        
+        completed_count = len(self.completed_challenges) if self.completed_challenges else 0
+        return int((completed_count / total_challenges) * 100)
+    
+    @property
+    def completed_challenges_list(self):
+        """Get list of completed challenge IDs"""
+        import json
+        if isinstance(self.completed_challenges, str):
+            return json.loads(self.completed_challenges)
+        return self.completed_challenges or []
 
 
 class PlayerChallengeAttempt(TimestampedModel):
@@ -166,6 +220,7 @@ class PlayerChallengeAttempt(TimestampedModel):
 class Hint(models.Model):
     """Hints that can be given to players"""
     content = models.TextField()
+    order = models.IntegerField(default=0)
     
     # Context
     concept = models.ForeignKey(
@@ -180,12 +235,22 @@ class Hint(models.Model):
         null=True,
         blank=True
     )
+    challenge = models.ForeignKey(
+        Challenge,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='hints'
+    )
     
     # Cost
     gold_cost = models.IntegerField(default=5)
     
+    class Meta:
+        ordering = ['order']
+    
     def __str__(self):
-        context = self.concept or self.lesson or "General"
+        context = self.challenge or self.concept or self.lesson or "General"
         return f"Hint for {context}"
 
 

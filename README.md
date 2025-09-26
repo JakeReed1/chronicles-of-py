@@ -1,14 +1,21 @@
 # Chronicles of Py
 
-A JRPG that teaches Python programming through turn-based battles and adventures. Players write Python code to cast spells, defeat enemies, and progress through the game world.
+A web-based JRPG that teaches Python programming through turn-based battles and adventures. Built with Phaser 3 for the game engine and Django for the backend.
+
+## Architecture
+
+- **Frontend**: Phaser 3 game engine for rich, interactive gameplay
+- **Backend**: Django REST API for authentication, progress tracking, and educational content
+- **Educational**: Integrated Python lessons and coding challenges
+- **Safe Execution**: RestrictedPython for secure code evaluation
 
 ## Features
 
-- **Turn-based battles** where attacks are Python functions
-- **Progressive learning** from basic syntax to advanced concepts
-- **Code-based magic system** using loops, conditionals, and more
-- **Django-powered** web application
-- **Safe code execution** with RestrictedPython
+- **Interactive Game World**: Explore a fantasy world powered by Phaser 3
+- **Code-Based Combat**: Write Python code to cast spells and defeat enemies
+- **Progressive Learning**: Start with `print()` and advance to complex algorithms
+- **Persistent Progress**: Save your game state and continue anytime
+- **Educational Content**: Built-in Python lessons and challenges
 
 ## Setup
 

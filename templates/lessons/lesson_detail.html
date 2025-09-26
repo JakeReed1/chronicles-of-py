@@ -1,0 +1,140 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ lesson.title }} - Chronicles of Py{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'lessons:list' %}">Lessons</a></li>
+            <li class="breadcrumb-item active">{{ lesson.title }}</li>
+        </ol>
+    </nav>
+    
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card shadow">
+                <div class="card-body">
+                    <h1 class="card-title">{{ lesson.title }}</h1>
+                    
+                    {% if lesson.concept %}
+                    <p class="mb-3">
+                        <span class="badge bg-info">{{ lesson.concept.name }}</span>
+                        <span class="badge bg-{{ lesson.get_difficulty_color }}">
+                            {{ lesson.get_difficulty_display }}
+                        </span>
+                    </p>
+                    {% endif %}
+                    
+                    <div class="lesson-content">
+                        {{ lesson.content|safe }}
+                    </div>
+                    
+                    {% if lesson.code_examples %}
+                    <div class="mt-4">
+                        <h3>Code Examples</h3>
+                        <div class="bg-dark text-white p-3 rounded">
+                            <pre><code>{{ lesson.code_examples }}</code></pre>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="card shadow mt-4">
+                <div class="card-header bg-primary text-white">
+                    <h3 class="mb-0">Challenges</h3>
+                </div>
+                <div class="card-body">
+                    {% if challenges %}
+                    <div class="list-group">
+                        {% for challenge in challenges %}
+                        <div class="list-group-item d-flex justify-content-between align-items-center">
+                            <div>
+                                <h5 class="mb-1">{{ challenge.title }}</h5>
+                                <p class="mb-1">{{ challenge.description|truncatewords:20 }}</p>
+                                <small class="text-muted">
+                                    <i class="bi bi-star-fill text-warning"></i> 
+                                    {{ challenge.experience_reward }} XP
+                                </small>
+                            </div>
+                            <a href="{% url 'lessons:challenge' challenge.pk %}" 
+                               class="btn btn-outline-primary">
+                                {% if challenge.id in progress.completed_challenges_list %}
+                                    <i class="bi bi-check-circle"></i> Review
+                                {% else %}
+                                    Start Challenge
+                                {% endif %}
+                            </a>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <p class="text-muted">No challenges available for this lesson yet.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-4">
+            <div class="card shadow sticky-top" style="top: 20px;">
+                <div class="card-header bg-secondary text-white">
+                    <h4 class="mb-0">Progress</h4>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <h5>Completion Status</h5>
+                        <div class="progress" style="height: 25px;">
+                            <div class="progress-bar bg-success" role="progressbar" 
+                                 style="width: {{ progress.completion_percentage }}%">
+                                {{ progress.completion_percentage }}%
+                            </div>
+                        </div>
+                    </div>
+                    
+                    {% if progress.is_completed %}
+                    <div class="alert alert-success">
+                        <i class="bi bi-trophy"></i> Lesson Completed!
+                    </div>
+                    {% endif %}
+                    
+                    <div class="d-grid gap-2">
+                        {% if challenges %}
+                        <a href="{% url 'lessons:challenge' challenges.first.pk %}" 
+                           class="btn btn-primary">
+                            {% if progress.is_completed %}
+                                Review Challenges
+                            {% else %}
+                                Start First Challenge
+                            {% endif %}
+                        </a>
+                        {% endif %}
+                        
+                        <a href="{% url 'lessons:list' %}" class="btn btn-outline-secondary">
+                            Back to Lessons
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.lesson-content {
+    font-size: 1.1rem;
+    line-height: 1.7;
+}
+.lesson-content h2, .lesson-content h3 {
+    margin-top: 2rem;
+    margin-bottom: 1rem;
+}
+.lesson-content pre {
+    background-color: #f8f9fa;
+    padding: 1rem;
+    border-radius: 0.25rem;
+    overflow-x: auto;
+}
+</style>
+{% endblock %}

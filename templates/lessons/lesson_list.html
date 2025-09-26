@@ -1,0 +1,76 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Lessons - Chronicles of Py{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1 class="mb-4">Python Lessons</h1>
+    <p class="lead">Master Python concepts through interactive lessons and challenges!</p>
+    
+    <div class="row mt-5">
+        {% for lesson in lessons %}
+        <div class="col-md-6 col-lg-4 mb-4">
+            <div class="card h-100 shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">{{ lesson.title }}</h5>
+                </div>
+                <div class="card-body">
+                    <p class="card-text">{{ lesson.description|truncatewords:20 }}</p>
+                    
+                    {% if lesson.concept %}
+                    <p class="mb-2">
+                        <span class="badge bg-info">{{ lesson.concept.name }}</span>
+                    </p>
+                    {% endif %}
+                    
+                    <div class="mb-3">
+                        <small class="text-muted">
+                            Difficulty: 
+                            <span class="badge bg-{{ lesson.get_difficulty_color }}">
+                                {{ lesson.get_difficulty_display }}
+                            </span>
+                        </small>
+                    </div>
+                    
+                    {% if lesson.player_progress %}
+                        {% if lesson.player_progress.is_completed %}
+                            <div class="alert alert-success py-1 px-2 mb-2">
+                                <small><i class="bi bi-check-circle"></i> Completed!</small>
+                            </div>
+                        {% else %}
+                            <div class="progress mb-2" style="height: 20px;">
+                                <div class="progress-bar" role="progressbar" 
+                                     style="width: {{ lesson.player_progress.completion_percentage }}%">
+                                    {{ lesson.player_progress.completion_percentage }}%
+                                </div>
+                            </div>
+                        {% endif %}
+                    {% endif %}
+                </div>
+                <div class="card-footer bg-transparent">
+                    <a href="{% url 'lessons:detail' lesson.pk %}" class="btn btn-primary w-100">
+                        {% if lesson.player_progress %}Continue{% else %}Start{% endif %} Lesson
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-12">
+            <div class="alert alert-info">
+                No lessons available yet. Check back soon!
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<style>
+.card {
+    transition: transform 0.2s;
+}
+.card:hover {
+    transform: translateY(-5px);
+}
+</style>
+{% endblock %}

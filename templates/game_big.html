@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chronicles of Py - Big Screen</title>
+    <style>
+        html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+        }
+        #game-container {
+            height: 100%;
+            width: 100%;
+        }
+    </style>
+    {% load static %}
+    <script>
+        // Make CSRF token available to JavaScript
+        window.CSRF_TOKEN = "{{ csrf_token }}";
+    </script>
+</head>
+<body>
+    <div id="game-container"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/phaser@3.70.0/dist/phaser.min.js"></script>
+    
+    <script type="module">
+        // Import GameState first
+        import '/static/game/GameState.js';
+        
+        // Import scenes
+        import BootScene from '/static/game/scenes/BootScene.js';
+        import PreloadScene from '/static/game/scenes/PreloadScene.js';
+        import MainMenuScene from '/static/game/scenes/MainMenuScene.js';
+        import WorldScene from '/static/game/scenes/WorldScene.js';
+        import BattleScene from '/static/game/scenes/BattleScene.js';
+        import UIScene from '/static/game/scenes/UIScene.js';
+        
+        // Game configuration
+        const config = {
+            type: Phaser.AUTO,
+            scale: {
+                mode: Phaser.Scale.FIT,
+                parent: 'game-container',
+                autoCenter: Phaser.Scale.CENTER_BOTH,
+                width: 1920,
+                height: 1080
+            },
+            pixelArt: true,
+            physics: {
+                default: 'arcade',
+                arcade: {
+                    gravity: { y: 0 },
+                    debug: false
+                }
+            },
+            scene: [BootScene, PreloadScene, MainMenuScene, WorldScene, BattleScene, UIScene]
+        };
+        
+        // Initialize game
+        const game = new Phaser.Game(config);
+        
+        // Add debug utilities for development
+        window.debugGame = {
+            resetGame: () => window.gameState.resetGame(),
+            showSave: () => JSON.parse(localStorage.getItem('chroniclesOfPySave')),
+            setPosition: (x, y) => window.gameState.savePlayerPosition(x, y),
+            getPosition: () => window.gameState.getPlayerPosition(),
+            defeatEnemy: (id) => window.gameState.markEnemyDefeated(id),
+            addXP: (xp) => window.gameState.addExperience(xp)
+        };
+        
+        console.log('Game initialized! Debug commands available via window.debugGame');
+    </script>
+</body>
+</html>

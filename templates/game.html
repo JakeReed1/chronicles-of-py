@@ -1,0 +1,84 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Play - Chronicles of Py{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-3">
+    <div class="row">
+        <div class="col-12 text-center">
+            <h2 class="mb-3">Chronicles of Py - Adventure Mode</h2>
+            
+            <!-- Game container -->
+            <div id="game-container" style="margin: 0 auto; width: 800px; height: 600px; border: 2px solid #4a4a6e;"></div>
+            
+            <!-- Game info -->
+            <div class="mt-3">
+                <p class="text-muted">
+                    <strong>Controls:</strong> Arrow Keys/WASD to move | Click buttons for actions | ESC for menu
+                </p>
+            </div>
+            
+            <!-- Quick links -->
+            <div class="mt-3">
+                <a href="/lessons/" class="btn btn-success me-2">Python Lessons</a>
+                <a href="/" class="btn btn-secondary">Back to Home</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Include Phaser 3 from CDN -->
+<script src="https://cdn.jsdelivr.net/npm/phaser@3.70.0/dist/phaser.min.js"></script>
+
+<!-- Include game files -->
+<script src="{% static 'game/config.js' %}"></script>
+<script type="module">
+    // Import scenes
+    import BootScene from '{% static "game/scenes/BootScene.js" %}';
+    import PreloadScene from '{% static "game/scenes/PreloadScene.js" %}';
+    import MainMenuScene from '{% static "game/scenes/MainMenuScene.js" %}';
+    import WorldScene from '{% static "game/scenes/WorldScene.js" %}';
+    import BattleScene from '{% static "game/scenes/BattleScene.js" %}';
+    import UIScene from '{% static "game/scenes/UIScene.js" %}';
+    
+    // Add scenes to config
+    config.scene = [
+        BootScene,
+        PreloadScene,
+        MainMenuScene,
+        WorldScene,
+        BattleScene,
+        UIScene
+    ];
+    
+    // Initialize game
+    window.game = new Phaser.Game(config);
+    
+    // Set CSRF token
+    const csrfToken = '{{ csrf_token }}';
+    window.CSRF_TOKEN = csrfToken;
+    
+    // Initialize player data
+    {% if user.is_authenticated %}
+    window.gameState.setPlayer({
+        id: {{ user.player.id|default:"null" }},
+        name: '{{ user.player.name|default:user.username }}',
+        level: {{ user.player.level|default:1 }},
+        hp: {{ user.player.current_hp|default:100 }},
+        maxHp: {{ user.player.max_hp|default:100 }},
+        mp: {{ user.player.current_mp|default:50 }},
+        maxMp: {{ user.player.max_mp|default:50 }}
+    });
+    {% endif %}
+</script>
+
+<style>
+#game-container {
+    background: #1a1a2e;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+    border-radius: 8px;
+    overflow: hidden;
+}
+</style>
+{% endblock %}

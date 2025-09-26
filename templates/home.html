@@ -8,9 +8,9 @@
         <h1 class="display-4 mb-4">Welcome to {{ game_title }}</h1>
         <p class="lead">Learn Python programming through an epic RPG adventure!</p>
         
-        <div class="hero-image my-5">
-            <img src="/static/images/hero-placeholder.png" alt="Game Hero" class="img-fluid" style="max-height: 400px;">
-        </div>
+                <div class="text-center my-5">
+            <div class="game-logo" style="font-size: 4rem; color: #4a4a6e;">🐍⚔️</div>
+            <h1 class="display-4 mt-4">Chronicles of Py</h1>
         
         <div class="features-grid row mt-5">
             <div class="col-md-4 mb-4">
@@ -39,14 +39,11 @@
             </div>
         </div>
         
-        {% if user.is_authenticated %}
-            <a href="/battles/" class="btn btn-primary btn-lg mt-4">Continue Adventure</a>
-        {% else %}
-            <div class="mt-4">
-                <a href="/admin/" class="btn btn-primary btn-lg me-3">Start Your Journey</a>
-                <a href="/admin/login/" class="btn btn-outline-primary btn-lg">Login</a>
-            </div>
-        {% endif %}
+                    {% if user.is_authenticated %}
+                <a href="{% url 'game_big' %}" class="btn btn-primary btn-lg">Play Game</a>
+            {% else %}
+                <p>Please <a href="{% url 'login' %}">login</a> or <a href="{% url 'signup' %}">sign up</a> to play!</p>
+            {% endif %}
     </div>
 </div>
 

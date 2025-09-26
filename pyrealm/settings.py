@@ -160,16 +160,20 @@ CORS_ALLOWED_ORIGINS = env.list('CORS_ALLOWED_ORIGINS', default=[
 
 # REST Framework settings
 REST_FRAMEWORK = {
-    'DEFAULT_AUTHENTICATION_CLASSES': (
-        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework.authentication.SessionAuthentication',
-    ),
+    ],
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.IsAuthenticated',
     ],
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': 20,
 }
+
+# Authentication settings
+LOGIN_URL = 'login'
+LOGIN_REDIRECT_URL = '/battles/'
+LOGOUT_REDIRECT_URL = '/'
 
 # Celery Configuration (for async tasks)
 CELERY_BROKER_URL = env('REDIS_URL', default='redis://localhost:6379')

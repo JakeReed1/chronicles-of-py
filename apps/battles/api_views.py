@@ -3,22 +3,11 @@ import sys
 import io
 import traceback
 import re
-from django.shortcuts import redirect
-from django.views.generic import View
-from django.contrib.auth.mixins import LoginRequiredMixin
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from contextlib import redirect_stdout, redirect_stderr
 import ast
-
-
-class BattleView(LoginRequiredMixin, View):
-    """Redirect to the Phaser game - battles are now handled there"""
-    
-    def get(self, request, *args, **kwargs):
-        return redirect('game')
-
 
 # Restricted built-ins for safety
 SAFE_BUILTINS = {

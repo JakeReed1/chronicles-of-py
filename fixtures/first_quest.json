@@ -1,0 +1,109 @@
+[
+    {
+        "model": "world.world",
+        "pk": 1,
+        "fields": {
+            "name": "PyRealm",
+            "description": "A magical world where code comes to life"
+        }
+    },
+    {
+        "model": "world.region",
+        "pk": 1,
+        "fields": {
+            "world": 1,
+            "name": "Tutorial Village",
+            "description": "A peaceful village where new heroes begin their journey",
+            "level_range_min": 1,
+            "level_range_max": 5,
+            "order": 1
+        }
+    },
+    {
+        "model": "world.location",
+        "pk": 1,
+        "fields": {
+            "region": 1,
+            "name": "Village Square",
+            "description": "The heart of Tutorial Village, where adventurers gather",
+            "x_coordinate": 0,
+            "y_coordinate": 0,
+            "is_safe_zone": true,
+            "connected_locations": []
+        }
+    },
+    {
+        "model": "world.location",
+        "pk": 2,
+        "fields": {
+            "region": 1,
+            "name": "Goblin Forest Edge",
+            "description": "The edge of a dark forest where code goblins lurk",
+            "x_coordinate": 1,
+            "y_coordinate": 0,
+            "is_safe_zone": false,
+            "connected_locations": [1]
+        }
+    },
+    {
+        "model": "world.npc",
+        "pk": 1,
+        "fields": {
+            "name": "Elder Pythonista",
+            "title": "Village Elder",
+            "location": 1,
+            "dialogue": {
+                "greeting": "Welcome, young coder! I am the Elder Pythonista.",
+                "quests": "A Code Goblin has been terrorizing our village! Can you help us?",
+                "farewell": "May your code be bug-free!"
+            },
+            "is_quest_giver": true,
+            "is_merchant": false,
+            "inventory": "{}",
+            "sprite_name": "elder.png"
+        }
+    },
+    {
+        "model": "world.quest",
+        "pk": 1,
+        "fields": {
+            "title": "Your First Battle",
+            "description": "Defeat the Code Goblin terrorizing the village",
+            "quest_type": "combat",
+            "giver_npc": 1,
+            "objectives": {
+                "defeat_enemies": [
+                    {
+                        "enemy_id": 1,
+                        "enemy_name": "Code Goblin",
+                        "count": 1
+                    }
+                ]
+            },
+            "prerequisites": [],
+            "required_level": 1,
+            "experience_reward": 50,
+            "gold_reward": 25,
+            "item_rewards": [],
+            "dialogue": {
+                "start": "A Code Goblin has stolen our village's Python documentation! Please defeat it and retrieve our knowledge!",
+                "progress": "Have you defeated the Code Goblin yet?",
+                "complete": "Thank you! You've saved our documentation! Here's your reward."
+            },
+            "is_main_quest": true,
+            "is_repeatable": false,
+            "order": 1
+        }
+    },
+    {
+        "model": "world.enemyspawn",
+        "pk": 1,
+        "fields": {
+            "location": 2,
+            "enemy": 1,
+            "spawn_chance": 1.0,
+            "max_count": 1,
+            "respawn_time": 300
+        }
+    }
+]

@@ -1,0 +1,245 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ challenge.title }} - Chronicles of Py{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'lessons:list' %}">Lessons</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'lessons:detail' challenge.lesson.pk %}">{{ challenge.lesson.title }}</a></li>
+            <li class="breadcrumb-item active">{{ challenge.title }}</li>
+        </ol>
+    </nav>
+    
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                    <h2 class="mb-0">{{ challenge.title }}</h2>
+                    <span class="badge bg-warning">
+                        <i class="bi bi-star-fill"></i> {{ challenge.experience_reward }} XP
+                    </span>
+                </div>
+                <div class="card-body">
+                    <div class="challenge-description mb-4">
+                        {{ challenge.description|safe }}
+                    </div>
+                    
+                    {% if challenge.starter_code %}
+                    <div class="mb-4">
+                        <h4>Starter Code</h4>
+                        <div class="bg-light p-3 rounded border">
+                            <pre><code class="language-python">{{ challenge.starter_code }}</code></pre>
+                        </div>
+                    </div>
+                    {% endif %}
+                    
+                    <div class="mb-4">
+                        <h4>Your Solution</h4>
+                        <div class="form-group">
+                            <textarea id="code-editor" class="form-control font-monospace" 
+                                      rows="15" placeholder="Write your Python code here...">{{ challenge.starter_code|default:"" }}</textarea>
+                        </div>
+                        <div class="d-flex justify-content-between mt-3">
+                            <button id="run-code" class="btn btn-primary">
+                                <i class="bi bi-play-fill"></i> Run Code
+                            </button>
+                            <button id="reset-code" class="btn btn-outline-secondary">
+                                <i class="bi bi-arrow-counterclockwise"></i> Reset
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div id="output-panel" class="d-none">
+                        <h4>Output</h4>
+                        <div id="output-content" class="bg-dark text-white p-3 rounded">
+                            <pre id="output-text"></pre>
+                        </div>
+                    </div>
+                    
+                    <div id="result-panel" class="mt-4 d-none">
+                        <!-- Results will be displayed here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-4">
+            <div class="card shadow mb-4">
+                <div class="card-header bg-info text-white">
+                    <h4 class="mb-0"><i class="bi bi-lightbulb"></i> Hints</h4>
+                </div>
+                <div class="card-body">
+                    <div id="hints-container">
+                        <p class="text-muted">Hints will appear here if you need help.</p>
+                    </div>
+                    <button id="get-hint" class="btn btn-sm btn-outline-info mt-2" data-attempts="0">
+                        Get a Hint
+                    </button>
+                </div>
+            </div>
+            
+            {% if is_completed %}
+            <div class="alert alert-success">
+                <i class="bi bi-check-circle-fill"></i> You've completed this challenge!
+            </div>
+            {% endif %}
+            
+            <div class="card shadow">
+                <div class="card-body">
+                    <h5>Challenge Tips</h5>
+                    <ul class="mb-0">
+                        <li>Read the description carefully</li>
+                        <li>Test your code before submitting</li>
+                        <li>Use the hints if you get stuck</li>
+                        <li>Learn from error messages</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+#code-editor {
+    font-family: 'Courier New', monospace;
+    font-size: 14px;
+    background-color: #f8f9fa;
+    border: 1px solid #dee2e6;
+    tab-size: 4;
+}
+
+#output-content {
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.challenge-description {
+    font-size: 1.1rem;
+    line-height: 1.7;
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const codeEditor = document.getElementById('code-editor');
+    const runButton = document.getElementById('run-code');
+    const resetButton = document.getElementById('reset-code');
+    const outputPanel = document.getElementById('output-panel');
+    const outputText = document.getElementById('output-text');
+    const resultPanel = document.getElementById('result-panel');
+    const hintButton = document.getElementById('get-hint');
+    const hintsContainer = document.getElementById('hints-container');
+    
+    const starterCode = `{{ challenge.starter_code|escapejs }}`;
+    let attempts = 0;
+    
+    // Run code button
+    runButton.addEventListener('click', async function() {
+        const code = codeEditor.value;
+        attempts++;
+        
+        runButton.disabled = true;
+        runButton.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Running...';
+        
+        try {
+            const response = await fetch(`{% url 'lessons:submit' challenge.id %}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                body: JSON.stringify({
+                    code: code,
+                    attempts: attempts
+                })
+            });
+            
+            const result = await response.json();
+            
+            // Show output
+            outputPanel.classList.remove('d-none');
+            
+            if (result.error) {
+                outputText.textContent = result.error;
+                outputText.style.color = '#ff6b6b';
+            } else {
+                outputText.textContent = result.output || 'Code executed successfully!';
+                outputText.style.color = '#51cf66';
+            }
+            
+            // Show result panel
+            resultPanel.classList.remove('d-none');
+            resultPanel.className = result.success ? 
+                'alert alert-success mt-4' : 
+                'alert alert-warning mt-4';
+            
+            resultPanel.innerHTML = `
+                <h5>${result.success ? 'Success!' : 'Not Quite Right'}</h5>
+                <p>${result.message}</p>
+                ${result.success && result.experience_gained ? 
+                    `<p class="mb-0"><i class="bi bi-star-fill text-warning"></i> You earned ${result.experience_gained} XP!</p>` : ''}
+            `;
+            
+            // Auto-show hint if failed
+            if (!result.success && result.hint) {
+                hintsContainer.innerHTML = `<div class="alert alert-info mb-0">${result.hint}</div>`;
+            }
+            
+        } catch (error) {
+            resultPanel.classList.remove('d-none');
+            resultPanel.className = 'alert alert-danger mt-4';
+            resultPanel.innerHTML = `<h5>Error</h5><p>Failed to submit solution. Please try again.</p>`;
+        } finally {
+            runButton.disabled = false;
+            runButton.innerHTML = '<i class="bi bi-play-fill"></i> Run Code';
+        }
+    });
+    
+    // Reset code button
+    resetButton.addEventListener('click', function() {
+        if (confirm('Are you sure you want to reset to the starter code?')) {
+            codeEditor.value = starterCode;
+            outputPanel.classList.add('d-none');
+            resultPanel.classList.add('d-none');
+        }
+    });
+    
+    // Get hint button
+    hintButton.addEventListener('click', function() {
+        const hintAttempts = parseInt(hintButton.dataset.attempts);
+        
+        // Show predefined hints based on attempt number
+        const hints = {{ hints|safe|default:"[]" }};
+        
+        if (hintAttempts < hints.length) {
+            hintsContainer.innerHTML += `
+                <div class="alert alert-info mb-2">
+                    <strong>Hint ${hintAttempts + 1}:</strong> ${hints[hintAttempts].content}
+                </div>
+            `;
+            hintButton.dataset.attempts = hintAttempts + 1;
+            
+            if (hintAttempts + 1 >= hints.length) {
+                hintButton.disabled = true;
+                hintButton.textContent = 'No more hints available';
+            }
+        }
+    });
+    
+    // Handle Tab key in textarea
+    codeEditor.addEventListener('keydown', function(e) {
+        if (e.key === 'Tab') {
+            e.preventDefault();
+            const start = this.selectionStart;
+            const end = this.selectionEnd;
+            
+            this.value = this.value.substring(0, start) + '    ' + this.value.substring(end);
+            this.selectionStart = this.selectionEnd = start + 4;
+        }
+    });
+});
+</script>
+{% endblock %}

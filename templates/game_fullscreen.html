@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chronicles of Py - Fullscreen</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background-color: #1a1a2e;
+        }
+        #game-container {
+            width: 100vw;
+            height: 100vh;
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container"></div>
+
+    <!-- Include Phaser 3 from CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/phaser@3.70.0/dist/phaser.min.js"></script>
+
+    <script type="module">
+        // Import scenes
+        import BootScene from '/static/game/scenes/BootScene.js';
+        import PreloadScene from '/static/game/scenes/PreloadScene.js';
+        import MainMenuScene from '/static/game/scenes/MainMenuScene.js';
+        import WorldScene from '/static/game/scenes/WorldScene.js';
+        import BattleScene from '/static/game/scenes/BattleScene.js';
+        import UIScene from '/static/game/scenes/UIScene.js';
+        
+        // Create game config with fullscreen dimensions
+        const gameConfig = {
+            type: Phaser.AUTO,
+            parent: 'game-container',
+            width: window.innerWidth,
+            height: window.innerHeight,
+            pixelArt: true,
+            physics: {
+                default: 'arcade',
+                arcade: {
+                    gravity: { y: 0 },
+                    debug: false
+                }
+            },
+            scene: [BootScene, PreloadScene, MainMenuScene, WorldScene, BattleScene, UIScene],
+            scale: {
+                mode: Phaser.Scale.RESIZE,
+                parent: 'game-container',
+                width: '100%',
+                height: '100%'
+            }
+        };
+        
+        // Initialize game state
+        class GameStateManager {
+            constructor() {
+                this.player = null;
+                this.currentScene = null;
+                this.inventory = [];
+                this.quests = [];
+                this.currentEnemy = null;
+                this.defeatedEnemies = [];
+            }
+            
+            setPlayer(playerData) {
+                this.player = playerData;
+            }
+            
+            getPlayer() {
+                return this.player;
+            }
+            
+            addExperience(xp) {
+                if (this.player) {
+                    this.player.experience = (this.player.experience || 0) + xp;
+                    const newLevel = Math.floor(this.player.experience / 100) + 1;
+                    if (newLevel > this.player.level) {
+                        this.player.level = newLevel;
+                        this.player.maxHp += 10;
+                        this.player.hp = this.player.maxHp;
+                        this.player.maxMp += 5;
+                        this.player.mp = this.player.maxMp;
+                    }
+                }
+            }
+            
+            addToInventory(item) {
+                this.inventory.push(item);
+            }
+            
+            isEnemyDefeated(enemyId) {
+                return this.defeatedEnemies.includes(enemyId);
+            }
+            
+            markEnemyDefeated(enemyId) {
+                if (!this.isEnemyDefeated(enemyId)) {
+                    this.defeatedEnemies.push(enemyId);
+                }
+            }
+        }
+        
+        // Create global game state
+        window.gameState = new GameStateManager();
+        
+        // Initialize game
+        window.game = new Phaser.Game(gameConfig);
+        
+        // Initialize test player
+        window.gameState.setPlayer({
+            id: 1,
+            name: 'Test Hero',
+            level: 1,
+            hp: 100,
+            maxHp: 100,
+            mp: 50,
+            maxMp: 50,
+            experience: 0
+        });
+        
+        // Handle window resize
+        window.addEventListener('resize', () => {
+            if (window.game && window.game.scale) {
+                window.game.scale.resize(window.innerWidth, window.innerHeight);
+            }
+        });
+        
+        console.log('Game initialized with fullscreen dimensions:', window.innerWidth, 'x', window.innerHeight);
+    </script>
+</body>
+</html>
