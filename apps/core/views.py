@@ -52,8 +52,8 @@ class CustomLoginView(LoginView):
     template_name = 'registration/login.html'
     
     def get_success_url(self):
-        # Redirect to battles page after login
-        return reverse_lazy('battles:battle')
+        # Redirect to game after login
+        return reverse_lazy('game_big')
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)

@@ -1,7 +1,9 @@
+console.log('PrintForestScene loaded:');
+
 // World Scene - First Level: The Print() Forest
-export default class WorldScene extends Phaser.Scene {
+export default class PrintForestScene extends Phaser.Scene {
     constructor() {
-        super({ key: 'WorldScene' });
+        super({ key: 'PrintForestScene' });
     }
 
     create() {
@@ -40,17 +42,11 @@ export default class WorldScene extends Phaser.Scene {
     }
     
     createFirstLevel() {
-        // Create grass background for top-down view
-        this.add.rectangle(1280, 720, 2560, 1440, 0x228B22); // Forest green background
-        
-        // Create ground pattern using tiles
-        for (let x = 0; x < 80; x++) {
-            for (let y = 0; y < 45; y++) {
-                // Create checkered grass pattern
-                const tint = (x + y) % 2 === 0 ? 0x228B22 : 0x1F7A1F;
-                this.add.rectangle(x * 32 + 16, y * 32 + 16, 32, 32, tint);
-            }
-        }
+        const grassBg = this.add.tileSprite(1280, 720, 2560, 1440, 'grass-tile');
+        grassBg.setDepth(-1); // Ensure it stays in the background
+
+        // If your grass tile is a different size than expected, you might need to scale it:
+        // grassBg.setTileScale(2, 2); // Makes each tile 2x bigger
         
         // Create walls/obstacles group for collision
         this.walls = this.physics.add.staticGroup();
@@ -144,7 +140,7 @@ export default class WorldScene extends Phaser.Scene {
         // Create player sprite for top-down view
         this.player = this.physics.add.sprite(position.x, position.y, 'hero');
         this.player.setCollideWorldBounds(true);
-        this.player.setScale(2.0);  // Increased from 1.2 to 2.0
+        this.player.setScale(0.1);  // Increased from 1.2 to 2.0
         
         // Set up physics properties for top-down
         this.player.setBounce(0);
@@ -328,6 +324,16 @@ export default class WorldScene extends Phaser.Scene {
         
         // Add run/sprint key
         this.shiftKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SHIFT);
+
+        // Add ESC key for pause menu
+        this.input.keyboard.on('keydown-ESC', () => {
+            console.log('ESC pressed - opening pause menu');
+            this.scene.pause();
+            this.scene.launch('PauseMenuScene', {
+                returnScene: 'PrintForestScene'
+            });
+            console.log('returnscene:', 'PrintForestScene');
+        });
     }
     
     showTutorialMessage() {
@@ -456,8 +462,8 @@ export default class WorldScene extends Phaser.Scene {
             if (!this.walkingTween || !this.walkingTween.isPlaying()) {
                 this.walkingTween = this.tweens.add({
                     targets: this.player,
-                    scaleX: this.player.flipX ? -1.3 : 1.3,
-                    scaleY: 1.1,
+                    scaleX: this.player.flipX ? -0.15 : 0.15,
+                    scaleY: 0.15,
                     duration: 200,
                     yoyo: true,
                     repeat: -1,
@@ -468,7 +474,7 @@ export default class WorldScene extends Phaser.Scene {
             // Stop walking animation
             if (this.walkingTween) {
                 this.walkingTween.stop();
-                this.player.setScale(this.player.flipX ? -1.2 : 1.2, 1.2);
+                this.player.setScale(this.player.flipX ? -0.15 : 0.15, 0.15);
             }
         }
         

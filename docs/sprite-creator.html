@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Chronicles of Py - Crono Sprite Creator</title>
+    <style>
+        body {
+            background: #222;
+            color: white;
+            font-family: monospace;
+            padding: 20px;
+        }
+        canvas {
+            border: 2px solid #fff;
+            image-rendering: pixelated;
+            image-rendering: crisp-edges;
+        }
+        #preview {
+            zoom: 10;
+            margin: 20px;
+        }
+        button {
+            padding: 10px 20px;
+            margin: 10px;
+            font-size: 16px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Crono-Style Sprite (32x32)</h1>
+    <canvas id="sprite" width="32" height="32"></canvas>
+    <canvas id="preview" width="32" height="32"></canvas>
+    
+    <br>
+    <button onclick="drawCrono()">Draw Crono</button>
+    <button onclick="saveSprite()">Save as PNG</button>
+    
+    <script>
+        const canvas = document.getElementById('sprite');
+        const ctx = canvas.getContext('2d');
+        const preview = document.getElementById('preview');
+        const pctx = preview.getContext('2d');
+        
+        ctx.imageSmoothingEnabled = false;
+        pctx.imageSmoothingEnabled = false;
+        
+        function drawPixel(x, y, color) {
+            ctx.fillStyle = color;
+            ctx.fillRect(x, y, 1, 1);
+        }
+        
+        function drawCrono() {
+            ctx.clearRect(0, 0, 32, 32);
+            
+            // More accurate Crono sprite based on the artwork
+            const sprite = [
+                '       RR           ',  // 0 - Top spike
+                '      RRR  RR       ',  // 1
+                '     RRRR RRR  R    ',  // 2 - Multiple spikes
+                '    RRRRRRRRRRRR    ',  // 3
+                '   RRRRRRRRRRRRR    ',  // 4 - Full spiky hair
+                '   ORRRRRRRRRRRO    ',  // 5 - Hair shadows
+                '    SSSSSSSSSS      ',  // 6 - Face starts
+                '   SSBSSSSSSBS      ',  // 7 - Eyes line
+                '   SWWSSSSSSWWS     ',  // 8 - Eye whites
+                '   SSSSSNSSSS       ',  // 9 - Nose
+                '    SSSSMSSS        ',  // 10 - Mouth
+                '     SSSSSS         ',  // 11 - Chin
+                '    TTTTTTTT        ',  // 12 - White undershirt collar
+                '   BBTTTTTBB        ',  // 13 - Blue tunic starts
+                '  BBBBBBBBBBB       ',  // 14 - Main tunic
+                '  BBBBBBBBBBBB      ',  // 15
+                '  BBBYYYBBBBB       ',  // 16 - Yellow belt/sash
+                '  BBBYYYBBBBB       ',  // 17
+                '   TTBBBBTTT        ',  // 18 - Arms with white sleeves
+                '   TTBBBBTTT        ',  // 19
+                '   SSSBBBSSS        ',  // 20 - Hands
+                '    PPPPPPP         ',  // 21 - Green pants start
+                '    PPPPPPP         ',  // 22
+                '    PPP PPP         ',  // 23
+                '    PPP PPP         ',  // 24
+                '    CCC CCC         ',  // 25 - Brown boots
+                '    CCC CCC         ',  // 26
+                '   CCCC CCCC        '   // 27 - Boot bottoms
+            ];
+            
+            const colors = {
+                'R': '#DC143C', // Bright red hair
+                'O': '#B91C1C', // Darker red for hair shading
+                'S': '#FDBCB4', // Light skin tone
+                'B': '#4A90E2', // Light blue tunic
+                'T': '#F5F5DC', // Beige/tan undershirt
+                'W': '#FFFFFF', // White for eyes
+                'Y': '#FFD700', // Yellow/gold belt
+                'P': '#6B8E23', // Olive green pants
+                'C': '#8B4513', // Brown boots
+                'N': '#E6A08C', // Nose shade
+                'M': '#C08A7C'  // Mouth
+            };
+            
+            // Draw the sprite with offset for centering
+            for (let y = 0; y < sprite.length; y++) {
+                for (let x = 0; x < sprite[y].length; x++) {
+                    const char = sprite[y][x];
+                    if (char !== ' ') {
+                        drawPixel(x + 6, y + 2, colors[char] || '#000000');
+                    }
+                }
+            }
+            
+            // Add black pupils
+            ctx.fillStyle = '#000000';
+            ctx.fillRect(11, 9, 1, 1);  // Left eye
+            ctx.fillRect(18, 9, 1, 1);  // Right eye
+            
+            // Add some detail lines for definition
+            ctx.fillStyle = '#00000033';  // Transparent black for outlines
+            ctx.fillRect(11, 14, 1, 1);  // Tunic detail
+            ctx.fillRect(19, 14, 1, 1);  // Tunic detail
+            
+            pctx.clearRect(0, 0, 32, 32);
+            pctx.drawImage(canvas, 0, 0);
+        }
+        
+        function saveSprite() {
+            canvas.toBlob(function(blob) {
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'crono-sprite.png';
+                a.click();
+                URL.revokeObjectURL(url);
+            });
+        }
+        
+        // Draw initial sprite
+        drawCrono();
+    </script>
+</body>
+</html>

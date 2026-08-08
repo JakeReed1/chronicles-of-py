@@ -172,7 +172,7 @@ REST_FRAMEWORK = {
 
 # Authentication settings
 LOGIN_URL = 'login'
-LOGIN_REDIRECT_URL = '/battles/'
+LOGIN_REDIRECT_URL = '/game/big/'
 LOGOUT_REDIRECT_URL = '/'
 
 # Celery Configuration (for async tasks)

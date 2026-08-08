@@ -1,7 +1,7 @@
-// GameState.js - Create this as a separate file or at the top of your main game file
+// GameState.js - Enhanced with multiple save slots
 class GameState {
     constructor() {
-        this.playerPosition = { x: 150, y: 500 }; // Default spawn position
+        this.playerPosition = { x: 150, y: 500 };
         this.defeatedEnemies = new Set();
         this.playerStats = {
             level: 1,
@@ -13,12 +13,103 @@ class GameState {
             experience: 0
         };
         this.currentEnemy = null;
+        this.currentSlot = 'autosave'; // Track which slot we're using
         
         // Load from localStorage if available
         this.loadGameState();
     }
-
-    // Add these methods to your existing GameState class:
+    
+    // NEW: Save to a specific slot with a name
+    saveToSlot(slotNumber, slotName = null) {
+        const saveData = {
+            slotName: slotName || `Save ${slotNumber}`,
+            slotNumber: slotNumber,
+            playerPosition: this.playerPosition,
+            defeatedEnemies: Array.from(this.defeatedEnemies),
+            playerStats: this.playerStats,
+            currentZone: this.currentZone || 'PrintForestScene',
+            timestamp: Date.now(),
+            playTime: this.playTime || 0
+        };
+        
+        localStorage.setItem(`chroniclesOfPy_slot${slotNumber}`, JSON.stringify(saveData));
+        this.currentSlot = `slot${slotNumber}`;
+        
+        // Update saves directory
+        this.updateSavesDirectory(slotNumber, slotName);
+    }
+    
+    // NEW: Load from a specific slot
+    loadFromSlot(slotNumber) {
+        const savedData = localStorage.getItem(`chroniclesOfPy_slot${slotNumber}`);
+        if (savedData) {
+            try {
+                const parsed = JSON.parse(savedData);
+                this.playerPosition = parsed.playerPosition || this.playerPosition;
+                this.defeatedEnemies = new Set(parsed.defeatedEnemies || []);
+                this.playerStats = { ...this.playerStats, ...parsed.playerStats };
+                this.currentZone = parsed.currentZone;
+                this.currentSlot = `slot${slotNumber}`;
+                return parsed;
+            } catch (e) {
+                console.error('Failed to load save slot:', e);
+                return null;
+            }
+        }
+        return null;
+    }
+    
+    // NEW: Get all save slots info
+    getAllSaveSlots() {
+        const slots = [];
+        for (let i = 1; i <= 5; i++) { // 5 save slots
+            const data = localStorage.getItem(`chroniclesOfPy_slot${i}`);
+            if (data) {
+                try {
+                    slots.push(JSON.parse(data));
+                } catch (e) {
+                    slots.push(null);
+                }
+            } else {
+                slots.push(null);
+            }
+        }
+        return slots;
+    }
+    
+    // NEW: Delete a save slot
+    deleteSlot(slotNumber) {
+        localStorage.removeItem(`chroniclesOfPy_slot${slotNumber}`);
+    }
+    
+    // NEW: Update saves directory
+    updateSavesDirectory(slotNumber, slotName) {
+        let directory = localStorage.getItem('chroniclesOfPy_directory');
+        let saves = directory ? JSON.parse(directory) : {};
+        saves[`slot${slotNumber}`] = {
+            name: slotName || `Save ${slotNumber}`,
+            timestamp: Date.now()
+        };
+        localStorage.setItem('chroniclesOfPy_directory', JSON.stringify(saves));
+    }
+    
+    // Modified: Now saves to current slot (KEEP THIS ONE)
+    saveToStorage() {
+        if (this.currentSlot === 'autosave') {
+            // Autosave uses the original system
+            const saveData = {
+                playerPosition: this.playerPosition,
+                defeatedEnemies: Array.from(this.defeatedEnemies),
+                playerStats: this.playerStats,
+                timestamp: Date.now()
+            };
+            localStorage.setItem('chroniclesOfPySave', JSON.stringify(saveData));
+        } else {
+            // Save to the current numbered slot
+            const slotNumber = parseInt(this.currentSlot.replace('slot', ''));
+            this.saveToSlot(slotNumber);
+        }
+    }
 
     getPlayer() {
         return { ...this.playerStats };
@@ -76,15 +167,7 @@ class GameState {
         return { ...this.playerStats };
     }
     
-    saveToStorage() {
-        const saveData = {
-            playerPosition: this.playerPosition,
-            defeatedEnemies: Array.from(this.defeatedEnemies),
-            playerStats: this.playerStats,
-            timestamp: Date.now()
-        };
-        localStorage.setItem('chroniclesOfPySave', JSON.stringify(saveData));
-    }
+    // DELETE THE DUPLICATE saveToStorage() that was here
     
     loadGameState() {
         const savedData = localStorage.getItem('chroniclesOfPySave');
@@ -113,6 +196,7 @@ class GameState {
             knowledge: 0,
             experience: 0
         };
+        this.currentSlot = 'autosave'; // Reset to autosave
     }
 }
 

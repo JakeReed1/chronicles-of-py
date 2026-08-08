@@ -131,7 +131,7 @@ export default class MainMenuScene extends Phaser.Scene {
             yesButton.on('pointerdown', () => {
                 // Reset and start new game
                 window.gameState.resetGame();
-                this.scene.start('WorldScene');
+                this.scene.start('PrintForestScene');
             });
             
             noButton.on('pointerdown', () => {
@@ -145,13 +145,13 @@ export default class MainMenuScene extends Phaser.Scene {
         } else {
             // No save exists, just start new game
             window.gameState.resetGame();
-            this.scene.start('WorldScene');
+            this.scene.start('PrintForestScene');
         }
     }
     
     continueGame() {
         // Continue from saved state (already loaded by GameState constructor)
-        this.scene.start('WorldScene');
+        this.scene.start('PrintForestScene');
     }
     
     startTutorial() {

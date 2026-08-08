@@ -225,12 +225,12 @@ export default class BattleScene extends Phaser.Scene {
         const spriteY = height * 0.3; // Both sprites at the same height
         
         this.playerSprite = this.add.sprite(width * 0.25, spriteY, 'hero');
-        this.playerSprite.setScale(spriteScale); // Scale based on screen size
+        this.playerSprite.setScale(0.5); // Scale based on screen size
         
         // Add idle animation to player (subtle breathing effect)
         this.tweens.add({
             targets: this.playerSprite,
-            scaleY: spriteScale * 1.05,
+            scaleY: 0.5 * 1.05,
             duration: 1500,
             yoyo: true,
             repeat: -1,
@@ -239,14 +239,14 @@ export default class BattleScene extends Phaser.Scene {
         
         // Enemy sprite - using actual enemy sprite
         this.enemySprite = this.add.sprite(width * 0.75, spriteY, 'slime');
-        this.enemySprite.setScale(spriteScale); // Same scale as player
+        this.enemySprite.setScale(10.0); // Same scale as player
         
         // Add idle animation to enemy (bouncing effect)
         this.tweens.add({
             targets: this.enemySprite,
             y: spriteY + 10,
-            scaleX: spriteScale * 1.05,
-            scaleY: spriteScale * 0.95,
+            scaleX: 10.0 * 1.05,
+            scaleY: 10.0 * 0.95,
             duration: 800,
             yoyo: true,
             repeat: -1,
@@ -890,7 +890,7 @@ export default class BattleScene extends Phaser.Scene {
                     this.cameras.main.fade(500, 0, 0, 0);
                     this.cameras.main.once('camerafadeoutcomplete', () => {
                         this.scene.stop('UIScene');
-                        this.scene.start('WorldScene');
+                        this.scene.start('PrintForestScene');
                     });
                 });
             
@@ -899,7 +899,7 @@ export default class BattleScene extends Phaser.Scene {
                 this.cameras.main.fade(500, 0, 0, 0);
                 this.cameras.main.once('camerafadeoutcomplete', () => {
                     this.scene.stop('UIScene');
-                    this.scene.start('WorldScene');
+                    this.scene.start('PrintForestScene');
                 });
             });
             
@@ -907,7 +907,7 @@ export default class BattleScene extends Phaser.Scene {
                 this.cameras.main.fade(500, 0, 0, 0);
                 this.cameras.main.once('camerafadeoutcomplete', () => {
                     this.scene.stop('UIScene');
-                    this.scene.start('WorldScene');
+                    this.scene.start('PrintForestScene');
                 });
             });
         });
@@ -1009,9 +1009,9 @@ export default class BattleScene extends Phaser.Scene {
             const hpPercentage = this.playerHP / this.playerMaxHP;
             this.playerHPBar.clear();
             this.playerHPBar.fillStyle(0x333333);
-            this.playerHPBar.fillRect(0, 0, 200, 20);
+            this.playerHPBar.fillRect(0, 0, 300, 20);
             this.playerHPBar.fillStyle(0x00ff00);
-            this.playerHPBar.fillRect(0, 0, 200 * hpPercentage, 20);
+            this.playerHPBar.fillRect(0, 0, 300 * hpPercentage, 20);
         }
         
         // Update player HP text
@@ -1026,9 +1026,9 @@ export default class BattleScene extends Phaser.Scene {
             const hpPercentage = this.enemyHP / this.enemyMaxHP;
             this.enemyHPBar.clear();
             this.enemyHPBar.fillStyle(0x333333);
-            this.enemyHPBar.fillRect(0, 0, 150, 15);
+            this.enemyHPBar.fillRect(0, 0, 300, 15);
             this.enemyHPBar.fillStyle(0xff0000);
-            this.enemyHPBar.fillRect(0, 0, 150 * hpPercentage, 15);
+            this.enemyHPBar.fillRect(0, 0, 300 * hpPercentage, 15);
         }
         
         // Update enemy HP text

@@ -3,6 +3,17 @@ from apps.characters.models import Player, Enemy
 from apps.battles.models import Battle
 from apps.world.models import Location, Quest
 from apps.lessons.models import Lesson, Challenge
+from apps.battles.models import Battle, BattleParticipant
+
+class BattleParticipantSerializer(serializers.ModelSerializer):
+    """Serializer for BattleParticipant model"""
+    class Meta:
+        model = BattleParticipant
+        fields = [
+            'id', 'character_type', 'character_id', 'position',
+            'is_active', 'temp_attack_modifier', 'temp_defense_modifier',
+            'status_effects'
+        ]
 
 
 class PlayerSerializer(serializers.ModelSerializer):
@@ -33,17 +44,25 @@ class EnemySerializer(serializers.ModelSerializer):
 class BattleSerializer(serializers.ModelSerializer):
     """Serializer for Battle model"""
     player = PlayerSerializer(read_only=True)
-    enemy = EnemySerializer(read_only=True)
+    participants = serializers.SerializerMethodField()
     
     class Meta:
         model = Battle
         fields = [
-            'id', 'player', 'enemy', 'player_hp', 'player_mp',
-            'enemy_hp', 'turn_count', 'is_complete', 'player_won',
-            'xp_reward', 'gold_reward', 'created_at'
+            'id', 'player', 'battle_type', 'is_active', 
+            'current_turn', 'turn_order', 'location',
+            'victory', 'experience_gained', 'gold_gained', 
+            'items_gained', 'code_attempts', 'successful_code_executions',
+            'participants', 'created_at'
         ]
         read_only_fields = ['created_at']
-
+    
+    def get_participants(self, obj):
+        """Return battle participants"""
+        return BattleParticipantSerializer(
+            obj.participants.all(), 
+            many=True
+        ).data
 
 class LocationSerializer(serializers.ModelSerializer):
     """Serializer for Location model"""

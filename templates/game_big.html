@@ -16,6 +16,10 @@
         }
     </style>
     {% load static %}
+
+    <!-- Option 2: If using SVG directly -->
+    <link rel="icon" type="image/svg+xml" href="{% static 'favicon.svg' %}">
+
     <script>
         // Make CSRF token available to JavaScript
         window.CSRF_TOKEN = "{{ csrf_token }}";
@@ -34,9 +38,11 @@
         import BootScene from '/static/game/scenes/BootScene.js';
         import PreloadScene from '/static/game/scenes/PreloadScene.js';
         import MainMenuScene from '/static/game/scenes/MainMenuScene.js';
-        import WorldScene from '/static/game/scenes/WorldScene.js';
+        import PrintForestScene from '/static/game/scenes/zones/PrintForestScene.js';
         import BattleScene from '/static/game/scenes/BattleScene.js';
         import UIScene from '/static/game/scenes/UIScene.js';
+        import SaveMenuScene from '/static/game/scenes/ui/SaveMenuScene.js';
+        import PauseMenuScene from '/static/game/scenes/ui/PauseMenuScene.js';
         
         // Game configuration
         const config = {
@@ -56,7 +62,7 @@
                     debug: false
                 }
             },
-            scene: [BootScene, PreloadScene, MainMenuScene, WorldScene, BattleScene, UIScene]
+            scene: [BootScene, PreloadScene, MainMenuScene, PrintForestScene, BattleScene, UIScene, SaveMenuScene, PauseMenuScene]
         };
         
         // Initialize game

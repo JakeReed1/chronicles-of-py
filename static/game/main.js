@@ -1,22 +1,31 @@
 // Import GameState FIRST, before anything else
 import './GameState.js';  // This will create window.gameState
+import './config.js';
 
 // Main game initialization
 import BootScene from './scenes/BootScene.js';
 import PreloadScene from './scenes/PreloadScene.js';
 import MainMenuScene from './scenes/MainMenuScene.js';
-import WorldScene from './scenes/WorldScene.js';
+import PrintForestScene from './scenes/zones/PrintForestScene.js';
 import BattleScene from './scenes/BattleScene.js';
 import UIScene from './scenes/UIScene.js';
+import SaveMenuScene from './scenes/ui/SaveMenuScene.js';
+import PauseMenuScene from './scenes/ui/PauseMenuScene.js';
+
+// Wait for everything to load
+console.log('All imports complete');
+console.log('PrintForestScene is:', PrintForestScene);
 
 // Add scenes to config
 config.scene = [
     BootScene,
     PreloadScene,
     MainMenuScene,
-    WorldScene,
+    PrintForestScene,
     BattleScene,
-    UIScene
+    UIScene,
+    SaveMenuScene, 
+    PauseMenuScene
 ];
 
 // Initialize the game when DOM is loaded

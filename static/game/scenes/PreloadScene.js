@@ -41,6 +41,10 @@ export default class PreloadScene extends Phaser.Scene {
             loadingText.destroy();
             // Scene will be started in create() method after assets are generated
         });
+
+        // LOAD ACTUAL IMAGE FILES HERE
+        this.load.image('hero', '/static/game/assets/sprites/hero.png');
+        this.load.image('grass-tile', '/static/game/assets/level_background/grass.png');
         
         // Don't load any external files - we'll create everything programmatically
         // Just trigger the load complete event
@@ -53,95 +57,7 @@ export default class PreloadScene extends Phaser.Scene {
     }
     
     createGameTextures() {
-        // Create a cool pixel art hero sprite inspired by Chrono Trigger
-        const heroGraphics = this.make.graphics({ x: 0, y: 0, add: false });
-        
-        // Create a 32x48 character sprite (taller for better proportions)
-        const width = 32;
-        const height = 48;
-        
-        // Hair (spiky red/orange hair like Crono)
-        heroGraphics.fillStyle(0xFF4500);
-        // Main hair
-        heroGraphics.fillRect(8, 0, 16, 8);
-        heroGraphics.fillRect(6, 2, 20, 6);
-        // Spiky parts
-        heroGraphics.fillRect(4, 0, 4, 4);
-        heroGraphics.fillRect(24, 0, 4, 4);
-        heroGraphics.fillRect(10, 0, 2, 2);
-        heroGraphics.fillRect(20, 0, 2, 2);
-        
-        // Face
-        heroGraphics.fillStyle(0xFFDBB4); // Skin tone
-        heroGraphics.fillRect(8, 8, 16, 12);
-        heroGraphics.fillRect(6, 10, 20, 8);
-        
-        // Eyes
-        heroGraphics.fillStyle(0x000000);
-        heroGraphics.fillRect(10, 12, 3, 3);
-        heroGraphics.fillRect(19, 12, 3, 3);
-        // Eye shine
-        heroGraphics.fillStyle(0xFFFFFF);
-        heroGraphics.fillRect(11, 12, 1, 1);
-        heroGraphics.fillRect(20, 12, 1, 1);
-        
-        // Nose (small line)
-        heroGraphics.fillStyle(0xE5A88A);
-        heroGraphics.fillRect(15, 15, 2, 1);
-        
-        // Mouth
-        heroGraphics.fillStyle(0x000000);
-        heroGraphics.fillRect(14, 17, 4, 1);
-        
-        // Scarf/Bandana (blue like many JRPG heroes)
-        heroGraphics.fillStyle(0x0066CC);
-        heroGraphics.fillRect(6, 20, 20, 3);
-        heroGraphics.fillRect(4, 21, 24, 2);
-        
-        // Body - Blue tunic/jacket
-        heroGraphics.fillStyle(0x0066CC);
-        heroGraphics.fillRect(8, 23, 16, 12);
-        heroGraphics.fillRect(6, 24, 20, 10);
-        
-        // Belt
-        heroGraphics.fillStyle(0x8B4513);
-        heroGraphics.fillRect(6, 30, 20, 2);
-        // Belt buckle
-        heroGraphics.fillStyle(0xFFD700);
-        heroGraphics.fillRect(14, 30, 4, 2);
-        
-        // Arms
-        heroGraphics.fillStyle(0xFFDBB4); // Skin
-        heroGraphics.fillRect(4, 24, 4, 8);
-        heroGraphics.fillRect(24, 24, 4, 8);
-        
-        // Gloves
-        heroGraphics.fillStyle(0xFFFFFF);
-        heroGraphics.fillRect(3, 30, 5, 4);
-        heroGraphics.fillRect(24, 30, 5, 4);
-        
-        // Pants (dark blue)
-        heroGraphics.fillStyle(0x000080);
-        heroGraphics.fillRect(8, 34, 16, 8);
-        heroGraphics.fillRect(10, 34, 12, 10);
-        
-        // Boots (brown)
-        heroGraphics.fillStyle(0x654321);
-        heroGraphics.fillRect(8, 42, 7, 6);
-        heroGraphics.fillRect(17, 42, 7, 6);
-        // Boot details
-        heroGraphics.fillStyle(0x4B3621);
-        heroGraphics.fillRect(8, 44, 7, 2);
-        heroGraphics.fillRect(17, 44, 7, 2);
-        
-        // Add some shading/details to the tunic
-        heroGraphics.fillStyle(0x004499);
-        heroGraphics.fillRect(8, 26, 2, 4);
-        heroGraphics.fillRect(22, 26, 2, 4);
-        heroGraphics.fillRect(12, 28, 8, 1);
-        
-        // Generate the texture
-        heroGraphics.generateTexture('hero', width, height);
+        console.log('Creating game textures...');
         
         // Create goblin sprite (green square)
         const goblinGraphics = this.make.graphics({ x: 0, y: 0, add: false });

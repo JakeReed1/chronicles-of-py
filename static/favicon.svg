@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!-- Dark background with gradient -->
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1a1a2e;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#0f3460;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="python" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#4584b6;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#3776ab;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="gold" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#ffde57;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#ffd43b;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Background -->
+  <rect width="32" height="32" fill="url(#bg)" rx="3"/>
+  
+  <!-- Pixel grid effect for retro game feel -->
+  <rect x="2" y="2" width="28" height="28" fill="none" stroke="#ffffff" stroke-width="0.1" opacity="0.2"/>
+  
+  <!-- Python snake coiled in S shape -->
+  <path d="M 8 8 Q 8 4, 12 4 T 20 4 Q 24 4, 24 8 Q 24 12, 20 12 L 12 12 Q 8 12, 8 16 Q 8 20, 12 20 L 20 20 Q 24 20, 24 24 Q 24 28, 20 28 Q 16 28, 12 28 T 8 24"
+        fill="none" stroke="url(#python)" stroke-width="3" stroke-linecap="round"/>
+  
+  <!-- Snake head details -->
+  <circle cx="8" cy="8" r="3" fill="url(#python)"/>
+  <circle cx="7" cy="7" r="0.8" fill="#ffffff"/>
+  <circle cx="7" cy="7" r="0.4" fill="#000000"/>
+  
+  <!-- Code brackets to represent programming -->
+  <text x="1" y="18" font-family="monospace" font-size="8" fill="#00ff00" opacity="0.8">{</text>
+  <text x="26" y="18" font-family="monospace" font-size="8" fill="#00ff00" opacity="0.8">}</text>
+  
+  <!-- RPG sword crossing through -->
+  <rect x="22" y="14" width="1.5" height="12" fill="#c0c0c0" transform="rotate(45 23 20)"/>
+  <rect x="21.5" y="13" width="2.5" height="3" fill="#ffd700" transform="rotate(45 23 20)"/>
+  <circle cx="25" cy="11" r="0.5" fill="#ff0000" transform="rotate(45 23 20)"/>
+  
+  <!-- Sparkle effects for magic/gaming -->
+  <circle cx="4" cy="24" r="0.5" fill="#ffff00" opacity="0.9">
+    <animate attributeName="opacity" values="0.9;0.3;0.9" dur="2s" repeatCount="indefinite"/>
+  </circle>
+  <circle cx="28" cy="8" r="0.5" fill="#00ffff" opacity="0.9">
+    <animate attributeName="opacity" values="0.3;0.9;0.3" dur="2s" repeatCount="indefinite"/>
+  </circle>
+  
+  <!-- Small "Py" text -->
+  <text x="16" y="20" font-family="monospace" font-size="6" font-weight="bold" fill="url(#gold)" text-anchor="middle">Py</text>
+</svg>
