@@ -6,7 +6,6 @@ from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib.auth.views import LogoutView
-from django.shortcuts import render
 from apps.core.views import HomeView, SignUpView, CustomLoginView, game_view
 from apps.battles.api_views import execute_python_code
 
@@ -17,11 +16,8 @@ urlpatterns = [
     # Direct API endpoint for code execution
     path('api/execute-code/', execute_python_code, name='execute_code'),
     
-    # Game URLs
+    # Game
     path('game/', game_view, name='game'),
-    path('game/test/', lambda request: render(request, 'game_test.html'), name='game_test'),
-    path('game/fullscreen/', lambda request: render(request, 'game_fullscreen.html'), name='game_fullscreen'),
-    path('game/big/', lambda request: render(request, 'game_big.html'), name='game_big'),
     
     # Authentication URLs
     path('signup/', SignUpView.as_view(), name='signup'),

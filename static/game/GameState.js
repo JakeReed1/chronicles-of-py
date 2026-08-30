@@ -3,20 +3,41 @@ class GameState {
     constructor() {
         this.playerPosition = { x: 150, y: 500 };
         this.defeatedEnemies = new Set();
+        this.collectedKeys = new Set();
         this.playerStats = {
             level: 1,
             hp: 100,
             maxHp: 100,
             mp: 50,
             maxMp: 50,
+            attack: 10,
+            defense: 5,
             knowledge: 0,
             experience: 0
         };
         this.currentEnemy = null;
         this.currentSlot = 'autosave'; // Track which slot we're using
-        
+
         // Load from localStorage if available
         this.loadGameState();
+    }
+
+    // How much XP is required to go from `level` to `level + 1`
+    xpForLevel(level) {
+        return level * 100;
+    }
+
+    // Level progress info for HUD display (0-1 percent toward next level)
+    getXpProgress() {
+        const level = this.playerStats.level;
+        const xp = this.playerStats.experience || 0;
+        const xpNeeded = this.xpForLevel(level);
+        return {
+            level,
+            xp,
+            xpNeeded,
+            percent: xpNeeded > 0 ? Math.min(1, Math.max(0, xp / xpNeeded)) : 0
+        };
     }
     
     // NEW: Save to a specific slot with a name
@@ -26,6 +47,7 @@ class GameState {
             slotNumber: slotNumber,
             playerPosition: this.playerPosition,
             defeatedEnemies: Array.from(this.defeatedEnemies),
+            collectedKeys: Array.from(this.collectedKeys),
             playerStats: this.playerStats,
             currentZone: this.currentZone || 'PrintForestScene',
             timestamp: Date.now(),
@@ -47,6 +69,7 @@ class GameState {
                 const parsed = JSON.parse(savedData);
                 this.playerPosition = parsed.playerPosition || this.playerPosition;
                 this.defeatedEnemies = new Set(parsed.defeatedEnemies || []);
+                this.collectedKeys = new Set(parsed.collectedKeys || []);
                 this.playerStats = { ...this.playerStats, ...parsed.playerStats };
                 this.currentZone = parsed.currentZone;
                 this.currentSlot = `slot${slotNumber}`;
@@ -100,6 +123,7 @@ class GameState {
             const saveData = {
                 playerPosition: this.playerPosition,
                 defeatedEnemies: Array.from(this.defeatedEnemies),
+                collectedKeys: Array.from(this.collectedKeys),
                 playerStats: this.playerStats,
                 timestamp: Date.now()
             };
@@ -121,23 +145,35 @@ class GameState {
         this.saveToStorage();
     }
 
+    // Adds XP, applying every level-up earned (a big reward can trigger several
+    // at once). Returns level-up info so callers (e.g. BattleScene) can show feedback.
     addExperience(xp) {
         this.playerStats.experience = (this.playerStats.experience || 0) + xp;
-        
-        // Simple level up system
-        const xpNeeded = this.playerStats.level * 100;
-        if (this.playerStats.experience >= xpNeeded) {
+
+        const startingLevel = this.playerStats.level;
+
+        while (this.playerStats.experience >= this.xpForLevel(this.playerStats.level)) {
+            this.playerStats.experience -= this.xpForLevel(this.playerStats.level);
             this.playerStats.level++;
-            this.playerStats.experience -= xpNeeded;
             this.playerStats.maxHp += 10;
             this.playerStats.maxMp += 5;
+            this.playerStats.attack = (this.playerStats.attack || 10) + 2;
+            this.playerStats.defense = (this.playerStats.defense || 5) + 1;
+
+            // Full heal on level up
             this.playerStats.hp = this.playerStats.maxHp;
             this.playerStats.mp = this.playerStats.maxMp;
-            
+
             console.log('LEVEL UP! Now level', this.playerStats.level);
         }
-        
+
         this.saveToStorage();
+
+        return {
+            leveledUp: this.playerStats.level > startingLevel,
+            levelsGained: this.playerStats.level - startingLevel,
+            level: this.playerStats.level
+        };
     }
     
     savePlayerPosition(x, y) {
@@ -157,7 +193,17 @@ class GameState {
     isEnemyDefeated(enemyId) {
         return this.defeatedEnemies.has(enemyId);
     }
-    
+
+    collectKey(keyId) {
+        this.collectedKeys.add(keyId);
+        this.saveToStorage();
+    }
+
+    hasKey(keyId) {
+        return this.collectedKeys.has(keyId);
+    }
+
+
     updatePlayerStats(stats) {
         this.playerStats = { ...this.playerStats, ...stats };
         this.saveToStorage();
@@ -166,9 +212,7 @@ class GameState {
     getPlayerStats() {
         return { ...this.playerStats };
     }
-    
-    // DELETE THE DUPLICATE saveToStorage() that was here
-    
+
     loadGameState() {
         const savedData = localStorage.getItem('chroniclesOfPySave');
         if (savedData) {
@@ -176,6 +220,7 @@ class GameState {
                 const parsed = JSON.parse(savedData);
                 this.playerPosition = parsed.playerPosition || this.playerPosition;
                 this.defeatedEnemies = new Set(parsed.defeatedEnemies || []);
+                this.collectedKeys = new Set(parsed.collectedKeys || []);
                 this.playerStats = { ...this.playerStats, ...parsed.playerStats };
             } catch (e) {
                 console.error('Failed to load save data:', e);
@@ -187,12 +232,15 @@ class GameState {
         localStorage.removeItem('chroniclesOfPySave');
         this.playerPosition = { x: 150, y: 500 };
         this.defeatedEnemies.clear();
+        this.collectedKeys.clear();
         this.playerStats = {
             level: 1,
             hp: 100,
             maxHp: 100,
             mp: 50,
             maxMp: 50,
+            attack: 10,
+            defense: 5,
             knowledge: 0,
             experience: 0
         };

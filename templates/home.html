@@ -40,7 +40,7 @@
         </div>
         
                     {% if user.is_authenticated %}
-                <a href="{% url 'game_big' %}" class="btn btn-primary btn-lg">Play Game</a>
+                <a href="{% url 'game' %}" class="btn btn-primary btn-lg">Play Game</a>
             {% else %}
                 <p>Please <a href="{% url 'login' %}">login</a> or <a href="{% url 'signup' %}">sign up</a> to play!</p>
             {% endif %}

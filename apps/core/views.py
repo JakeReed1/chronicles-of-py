@@ -8,7 +8,6 @@ from django.contrib.auth.views import LoginView, LogoutView
 from django.views.generic.edit import CreateView
 from django.urls import reverse_lazy
 from django.contrib import messages
-from django.contrib.auth.decorators import login_required
 
 from .forms import SignUpForm
 from apps.characters.models import Player
@@ -19,7 +18,6 @@ class HomeView(TemplateView):
     template_name = 'home.html'
 
 
-@login_required
 def game_view(request):
     """Game view for playing the Phaser game"""
     return render(request, 'game.html')
@@ -53,7 +51,7 @@ class CustomLoginView(LoginView):
     
     def get_success_url(self):
         # Redirect to game after login
-        return reverse_lazy('game_big')
+        return reverse_lazy('game')
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)

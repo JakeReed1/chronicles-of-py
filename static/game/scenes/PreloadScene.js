@@ -45,6 +45,25 @@ export default class PreloadScene extends Phaser.Scene {
         // LOAD ACTUAL IMAGE FILES HERE
         this.load.image('hero', '/static/game/assets/sprites/hero.png');
         this.load.image('grass-tile', '/static/game/assets/level_background/grass.png');
+
+        // Kenney "Roguelike/RPG Pack" tiles (CC0) - see assets/kenney/LICENSE.txt
+        this.load.image('k-tree-round', '/static/game/assets/kenney/tree_round.png');
+        this.load.image('k-tree-round2', '/static/game/assets/kenney/tree_round2.png');
+        this.load.image('k-tree-pine', '/static/game/assets/kenney/tree_pine_dark.png');
+        this.load.image('k-tree-pine2', '/static/game/assets/kenney/tree_pine_dark2.png');
+        this.load.image('k-tree-apple', '/static/game/assets/kenney/tree_apple.png');
+        this.load.image('k-bush-round', '/static/game/assets/kenney/bush_round.png');
+        this.load.image('k-flower-blue', '/static/game/assets/kenney/flower_blue.png');
+        this.load.image('k-flower-orange', '/static/game/assets/kenney/flower_orange.png');
+        this.load.image('k-ground-green', '/static/game/assets/kenney/ground_green.png');
+        this.load.image('k-ground-gray', '/static/game/assets/kenney/ground_gray.png');
+        this.load.image('k-ground-tan', '/static/game/assets/kenney/ground_tan.png');
+        this.load.image('k-ground-brown', '/static/game/assets/kenney/ground_brown.png');
+
+        // Kenney "Monster Builder Pack" (CC0) - hand-composited creatures
+        this.load.image('k-enemy-if-golem', '/static/game/assets/kenney/if_golem.png');
+        this.load.image('k-enemy-else-wraith', '/static/game/assets/kenney/else_wraith.png');
+        this.load.image('k-enemy-boss-exception', '/static/game/assets/kenney/boss_exception.png');
         
         // Don't load any external files - we'll create everything programmatically
         // Just trigger the load complete event
@@ -116,7 +135,76 @@ export default class PreloadScene extends Phaser.Scene {
         
         // Generate the slime texture
         slimeGraphics.generateTexture('slime', slimeWidth, slimeHeight);
-        
+
+        // Create the Loop Forest's tree enemy - a walking treant.
+        // Leaves for hair, branch arms with sticks poking out, no legs
+        // (trunk flares into roots), and a happy face below the leaves.
+        const treeEnemyGraphics = this.make.graphics({ x: 0, y: 0, add: false });
+
+        // Leaves ("hair") on top of the head
+        treeEnemyGraphics.fillStyle(0x228B22);
+        treeEnemyGraphics.fillCircle(16, 8, 8);
+        treeEnemyGraphics.fillCircle(9, 11, 5);
+        treeEnemyGraphics.fillCircle(23, 11, 5);
+        treeEnemyGraphics.fillStyle(0x3CB371);
+        treeEnemyGraphics.fillCircle(13, 6, 4);
+        treeEnemyGraphics.fillCircle(19, 9, 3);
+
+        // Trunk body, flaring into roots at the base - no legs
+        treeEnemyGraphics.fillStyle(0x654321);
+        treeEnemyGraphics.fillRect(12, 15, 8, 13);
+        treeEnemyGraphics.fillRect(9, 26, 14, 4);
+        treeEnemyGraphics.fillRect(7, 29, 18, 2);
+
+        // Bark texture
+        treeEnemyGraphics.fillStyle(0x4a3018);
+        treeEnemyGraphics.fillRect(14, 17, 1, 9);
+        treeEnemyGraphics.fillRect(18, 19, 1, 7);
+
+        // Arms - branches reaching out to the sides
+        treeEnemyGraphics.fillStyle(0x654321);
+        treeEnemyGraphics.fillRect(3, 17, 9, 3);
+        treeEnemyGraphics.fillRect(20, 17, 9, 3);
+
+        // Sticks poking out of the branch tips
+        treeEnemyGraphics.fillRect(2, 13, 2, 5);
+        treeEnemyGraphics.fillRect(2, 20, 2, 5);
+        treeEnemyGraphics.fillRect(28, 13, 2, 5);
+        treeEnemyGraphics.fillRect(28, 20, 2, 5);
+
+        // Happy face on the trunk, below the leaves
+        treeEnemyGraphics.fillStyle(0x000000);
+        treeEnemyGraphics.fillRect(13, 19, 2, 2);
+        treeEnemyGraphics.fillRect(17, 19, 2, 2);
+        treeEnemyGraphics.fillRect(13, 23, 1, 1);
+        treeEnemyGraphics.fillRect(14, 24, 4, 1);
+        treeEnemyGraphics.fillRect(18, 23, 1, 1);
+
+        treeEnemyGraphics.generateTexture('tree-enemy', 32, 32);
+
+        // Create the boss key - dropped after a boss fight, needed to unlock
+        // the portal to the next zone
+        const keyGraphics = this.make.graphics({ x: 0, y: 0, add: false });
+
+        // Bow (the round part you hold) - a bright ring over a darker center
+        keyGraphics.fillStyle(0xFFD700);
+        keyGraphics.fillCircle(11, 9, 8);
+        keyGraphics.fillStyle(0xB8860B);
+        keyGraphics.fillCircle(11, 9, 4);
+
+        // Shaft and teeth
+        keyGraphics.fillStyle(0xFFD700);
+        keyGraphics.fillRect(9, 14, 4, 14);
+        keyGraphics.fillRect(13, 22, 6, 3);
+        keyGraphics.fillRect(13, 27, 4, 3);
+
+        // Shine highlights
+        keyGraphics.fillStyle(0xFFF6C0);
+        keyGraphics.fillRect(9, 15, 2, 9);
+        keyGraphics.fillCircle(8, 6, 2);
+
+        keyGraphics.generateTexture('key-item', 32, 32);
+
         // Create spell effect (yellow star)
         const spellGraphics = this.make.graphics({ x: 0, y: 0, add: false });
         spellGraphics.fillStyle(0xFFD700);

@@ -180,69 +180,103 @@ def execute_python_code(request):
 
 
 def calculate_damage_from_execution(code, stdout, stderr):
-    """Calculate damage based on actual code execution"""
-    damage = 0
-    
-    # No damage if there were errors
+    """Calculate battle damage from a player's executed Python code.
+
+    Design: the numbers a player's code actually prints are the damage -
+    if your output says "Deal 15 damage!", that 15 is what happens to the
+    enemy, not a disconnected flavor number. This is what makes the battle
+    system "real": you're not picking a canned attack, you're computing the
+    hit yourself.
+
+    Breakdown of how a final damage value is built, in order:
+
+    1. Any error (stderr non-empty) -> 0 damage. Fix your code and retry.
+    2. Base damage from stdout:
+       - If the output contains numbers, they're summed and used directly,
+         capped at 60. The cap exists so a lazy `print(99999)` can't
+         trivialize every fight - it rewards printing *a* meaningful
+         number, not the single biggest one you can type.
+       - If the output has no numbers at all (e.g. `print("Hello!")`),
+         damage falls back to 5 per line printed, so early, numberless
+         lessons still land a basic hit.
+       - A small +2 flat bonus per line that mentions "attack".
+    3. Small bonuses for Python technique, layered on top of the base:
+       for/while loops, if-statements, def, range(), arithmetic operators,
+       list comprehensions, f-strings, and variable assignments (each
+       individually capped so no single trick dominates). These exist so
+       there's still a reason to write idiomatic code, but they no longer
+       outweigh what you actually printed.
+    4. Elemental spells: if the output mentions "fire", "ice", or
+       "thunder", damage is floored at 62 and given +8 on top (skilled
+       code can push it higher) - roughly 70% of the overall cap. This
+       matters because casting a spell costs the player 8 MP client-side
+       (see BattleScene.playerAttack/detectSpellElement), so a spell needs
+       to clearly outperform a free basic attack to be worth casting.
+    5. A final +/-10% random variance is applied.
+    6. The result is clamped to [1, 100] - every successful run does at
+       least 1 damage, and 100 is the hard ceiling no combination of
+       bonuses can exceed.
+    """
     if stderr:
         return 0
-    
-    # Base damage for successful execution
-    damage += 10
-    
-    # Damage based on output
+
+    damage = 0
+
     if stdout:
-        lines = stdout.strip().split('\n')
-        damage += len(lines) * 5  # 5 damage per output line
-        
-        # Bonus for specific patterns
-        for line in lines:
+        numbers = [abs(int(n)) for n in re.findall(r'-?\d+', stdout)]
+        if numbers:
+            # Capped so a bare print(99999) can't trivialize the fight -
+            # the cap rewards printing *a* meaningful number, not the
+            # biggest one you can type.
+            damage += min(sum(numbers), 60)
+        else:
+            # No numbers printed (e.g. print("Hello, World!")) - fall back
+            # to a modest per-line amount so early lessons still do something
+            damage += len(stdout.strip().split('\n')) * 5
+
+        for line in stdout.split('\n'):
             if 'attack' in line.lower():
-                damage += 3
-            if 'fire' in line.lower() or 'ice' in line.lower() or 'thunder' in line.lower():
-                damage += 5
-    
-    # Analyze code structure
-    lines_of_code = [l for l in code.split('\n') if l.strip() and not l.strip().startswith('#')]
-    
-    # Bonus for code complexity
+                damage += 2
+
+    # Smaller bonuses for good Python technique, layered on top
     if 'for ' in code:
-        damage += 10
-        # Extra bonus for nested loops
+        damage += 5
         if code.count('for ') > 1:
-            damage += 10
-    
+            damage += 5
+
     if 'while ' in code:
-        damage += 8
-    
+        damage += 4
+
     if 'if ' in code:
-        damage += 5
-    
-    if 'def ' in code:
-        damage += 15
-    
-    # Bonus for using Python features
-    if 'range(' in code:
-        damage += 5
-    
-    if any(op in code for op in ['+', '-', '*', '/', '//', '%', '**']):
         damage += 3
-    
-    # List comprehension bonus
-    if '[' in code and 'for' in code and ']' in code:
-        damage += 20
-    
-    # F-string bonus
-    if 'f"' in code or "f'" in code:
+
+    if 'def ' in code:
         damage += 8
-    
-    # Variable usage
+
+    if 'range(' in code:
+        damage += 3
+
+    if any(op in code for op in ['+', '-', '*', '/', '//', '%', '**']):
+        damage += 2
+
+    if '[' in code and 'for' in code and ']' in code:
+        damage += 10
+
+    if 'f"' in code or "f'" in code:
+        damage += 4
+
     assignment_count = len(re.findall(r'\w+\s*=\s*[^=]', code))
-    damage += assignment_count * 3
-    
+    damage += min(assignment_count * 2, 10)
+
+    # Elemental spells (fire/ice/thunder) cost MP client-side, so they need
+    # to hit hard enough to be worth it - guarantee a strong hit around 70%
+    # of the damage cap, with skilled code still pushing it higher.
+    if stdout and any(k in stdout.lower() for k in ('fire', 'ice', 'thunder')):
+        damage = max(damage, 62) + 8
+
     # Add some randomness (10% variation)
     import random
     damage = int(damage * (0.9 + random.random() * 0.2))
-    
-    # Cap maximum damage
-    return min(damage, 100)
+
+    # Every successful run still lands *something*, capped as before
+    return min(max(damage, 1), 100)

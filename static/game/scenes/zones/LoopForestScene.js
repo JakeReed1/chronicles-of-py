@@ -1,30 +1,30 @@
 import { COLORS, TEXT, createPanel, createGlowTitle } from '../../theme.js';
 
-// World Scene - First Level: The Print() Forest
-export default class PrintForestScene extends Phaser.Scene {
+// World Scene - Second Level: The Loop Forest
+export default class LoopForestScene extends Phaser.Scene {
     constructor() {
-        super({ key: 'PrintForestScene' });
+        super({ key: 'LoopForestScene' });
     }
 
     create() {
         // Track which zone the player is in (used by save/load and battle returns)
-        window.gameState.currentZone = 'PrintForestScene';
+        window.gameState.currentZone = 'LoopForestScene';
 
         // Disable gravity for top-down view
         this.physics.world.gravity.y = 0;
 
-        // Set world bounds for first level - expanded for larger top-down world
+        // Set world bounds - same size as Print Forest for consistency
         this.cameras.main.setBounds(0, 0, 2560, 1440);
         this.physics.world.setBounds(0, 0, 2560, 1440);
-        
-        // Create the first level - Python Forest (top-down)
-        this.createFirstLevel();
-        
+
+        // Create the second level - Loop Forest (top-down)
+        this.createLevel();
+
         // Create player
         this.createPlayer();
-        
-        // Create tutorial enemies
-        this.createTutorialEnemies();
+
+        // Create enemies
+        this.createEnemies();
 
         // If the boss is already down but its key hasn't been picked up yet,
         // the key is still waiting in the world
@@ -33,122 +33,99 @@ export default class PrintForestScene extends Phaser.Scene {
         // Set up camera
         this.cameras.main.startFollow(this.player);
         this.cameras.main.setDeadzone(600, 300);
-        this.cameras.main.setZoom(1.0); // Normal zoom for widescreen view
-        
+        this.cameras.main.setZoom(1.0);
+
         // Create UI overlay
         this.scene.launch('UIScene');
-        
+
         // Set up collisions and interactions
         this.setupCollisions();
-        
+
         // Show tutorial message
-        this.showTutorialMessage();
-        
+        this.showZoneMessage();
+
         // Set up controls
         this.setupControls();
     }
-    
-    createFirstLevel() {
-        const grassBg = this.add.tileSprite(1280, 720, 2560, 1440, 'grass-tile');
-        grassBg.setDepth(-1); // Ensure it stays in the background
 
-        // If your grass tile is a different size than expected, you might need to scale it:
-        // grassBg.setTileScale(2, 2); // Makes each tile 2x bigger
-        
+    createLevel() {
+        const grassBg = this.add.tileSprite(1280, 720, 2560, 1440, 'grass-tile');
+        grassBg.setTint(0x88CCFF); // Cooler tone to set the zone apart from Print Forest
+        grassBg.setDepth(-1);
+
         // Create walls/obstacles group for collision
         this.walls = this.physics.add.staticGroup();
-        
-        // Create border walls
-        // Top and bottom walls
-        for (let x = 0; x < 80; x++) {
-            this.walls.create(x * 32 + 16, 16, 'ground-tile').setTint(0x8B4513);
-            this.walls.create(x * 32 + 16, 1424, 'ground-tile').setTint(0x8B4513);
-        }
-        
-        // Left and right walls
-        for (let y = 0; y < 45; y++) {
-            this.walls.create(16, y * 32 + 16, 'ground-tile').setTint(0x8B4513);
-            this.walls.create(2544, y * 32 + 16, 'ground-tile').setTint(0x8B4513);
-        }
-        
-        // Create some interior walls/obstacles
-        // Create a simple maze-like structure
-        for (let i = 0; i < 15; i++) {
-            this.walls.create(400 + i * 32, 400, 'ground-tile').setTint(0x8B4513);
-            this.walls.create(400, 400 + i * 32, 'ground-tile').setTint(0x8B4513);
-        }
-        
-        for (let i = 0; i < 20; i++) {
-            this.walls.create(1200 + i * 32, 800, 'ground-tile').setTint(0x8B4513);
-            this.walls.create(1800, 600 + i * 32, 'ground-tile').setTint(0x8B4513);
-        }
-        
-        // Add more walls for complexity
-        for (let i = 0; i < 12; i++) {
-            this.walls.create(800, 200 + i * 32, 'ground-tile').setTint(0x8B4513);
-            this.walls.create(2000 + i * 32, 1000, 'ground-tile').setTint(0x8B4513);
-        }
-        
-        // Add trees as obstacles scattered around
-        this.trees = this.physics.add.staticGroup();
-        const treePositions = [
-            [200, 200], [400, 150], [600, 300], [800, 200], [1000, 150],
-            [1200, 250], [1400, 350], [1600, 200], [1800, 300], [2000, 250],
-            [2200, 400], [2400, 350], [100, 600], [300, 800], [500, 900],
-            [700, 1000], [900, 850], [1100, 900], [1300, 1000], [1500, 1100],
-            [1700, 950], [1900, 1100], [2100, 1000], [2300, 1200], [150, 1200],
-            [350, 1300], [550, 1200], [750, 1100], [950, 1300], [1150, 1200],
-            [1350, 1100], [1550, 1300], [1750, 1200], [1950, 1300], [2150, 1100],
-            [2350, 1300], [250, 500], [450, 600], [650, 500], [850, 600]
-        ];
-        
-        const treeTextures = ['k-tree-round', 'k-tree-round', 'k-tree-round2', 'k-tree-apple'];
-        treePositions.forEach(pos => {
-            // Shadow drawn before the tree so it renders underneath, not over it
-            this.add.ellipse(pos[0], pos[1] + 30, 65, 33, 0x000000, 0.3);
 
-            const tree = this.trees.create(pos[0], pos[1], Phaser.Math.RND.pick(treeTextures));
-            tree.setScale(5.0);
-            tree.refreshBody();
+        // Border walls
+        for (let x = 0; x < 80; x++) {
+            this.walls.create(x * 32 + 16, 16, 'ground-tile').setTint(0x4B0082);
+            this.walls.create(x * 32 + 16, 1424, 'ground-tile').setTint(0x4B0082);
+        }
+        for (let y = 0; y < 45; y++) {
+            this.walls.create(16, y * 32 + 16, 'ground-tile').setTint(0x4B0082);
+            this.walls.create(2544, y * 32 + 16, 'ground-tile').setTint(0x4B0082);
+        }
+
+        // Interior obstacles arranged as concentric rings, echoing "looping" back on itself
+        this.trees = this.physics.add.staticGroup();
+        const center = { x: 1280, y: 720 };
+        const rings = [
+            { radius: 300, count: 12 },
+            { radius: 500, count: 18 }
+        ];
+
+        const loopTreeTextures = ['k-tree-pine', 'k-tree-pine2'];
+        rings.forEach(ring => {
+            for (let i = 0; i < ring.count; i++) {
+                const angle = (i / ring.count) * Math.PI * 2;
+                const x = center.x + Math.cos(angle) * ring.radius;
+                const y = center.y + Math.sin(angle) * ring.radius;
+
+                // Shadow drawn before the tree so it renders underneath, not over it
+                this.add.ellipse(x, y + 28, 60, 30, 0x000000, 0.3);
+
+                const tree = this.trees.create(x, y, Phaser.Math.RND.pick(loopTreeTextures));
+                tree.setTint(0x3355AA);
+                tree.setScale(4.5);
+                tree.refreshBody();
+            }
         });
-        
-        // Add level title
-        createGlowTitle(this, 1280, 100, 'Level 1: The Print() Forest', {
+
+        // Level title
+        createGlowTitle(this, 1280, 100, 'Level 2: The Loop Forest', {
             fontSize: 48,
             color: '#ffffff'
         });
-        
-        // Add tutorial sign
+
+        // Tip sign
         this.sign = this.physics.add.staticSprite(250, 600, 'ground-tile');
-        this.sign.setTint(0xFFD700);
-        this.sign.setScale(2.0);  // Increased sign size
+        this.sign.setTint(0x00FFFF);
+        this.sign.setScale(2.0);
         this.add.text(250, 570, '!', {
-            fontSize: '36px',  // Increased from 24px to 36px
-            color: '#FFD700',
+            fontSize: '36px',
+            color: '#00FFFF',
             fontFamily: 'monospace',
             stroke: '#000000',
-            strokeThickness: 4  // Increased from 2 to 4
+            strokeThickness: 4
         }).setOrigin(0.5);
-        
-        // Add some decorative elements
-        // Flowers and bushes - scattered across the larger world
-        const decorTextures = ['k-flower-blue', 'k-flower-orange', 'k-bush-round'];
+
+        // Decorative ground cover, tinted to match the zone's cooler palette
         for (let i = 0; i < 40; i++) {
             const x = Phaser.Math.Between(100, 2400);
             const y = Phaser.Math.Between(100, 1300);
-            this.add.image(x, y, Phaser.Math.RND.pick(decorTextures)).setScale(1.5);
+            const decor = this.add.image(x, y, Phaser.Math.RND.pick(['k-flower-blue', 'k-bush-round']));
+            decor.setScale(1.5);
+            decor.setTint(Phaser.Math.RND.pick([0x00FFFF, 0x8888FF, 0xAA66FF]));
         }
 
-        // Exit portal to the next zone - sealed until the boss's key is collected
-        const hasKey = window.gameState.hasKey('boss1_key');
-
-        this.loopPortal = this.physics.add.staticSprite(2480, 720, 'ground-tile');
-        this.loopPortal.setTint(hasKey ? 0x00FFFF : 0x666666);
-        this.loopPortal.setScale(2.5);
-        this.loopPortal.refreshBody();
+        // Return portal to Print Forest
+        this.printPortal = this.physics.add.staticSprite(80, 720, 'ground-tile');
+        this.printPortal.setTint(0xFFD700);
+        this.printPortal.setScale(2.5);
+        this.printPortal.refreshBody();
 
         this.tweens.add({
-            targets: this.loopPortal,
+            targets: this.printPortal,
             alpha: 0.5,
             duration: 700,
             yoyo: true,
@@ -156,12 +133,37 @@ export default class PrintForestScene extends Phaser.Scene {
             ease: 'Sine.easeInOut'
         });
 
-        this.portalLabel = this.add.text(2480, 660,
-            hasKey ? 'Loop Forest ->' : '\u{1F512} Needs the Boss Key',
+        this.add.text(80, 660, '<- Print Forest', {
+            fontSize: '22px',
+            fontFamily: 'monospace',
+            color: '#FFD700',
+            stroke: '#000000',
+            strokeThickness: 4
+        }).setOrigin(0.5);
+
+        // Exit portal to the next zone - sealed until the boss's key is collected
+        const hasKey = window.gameState.hasKey('boss2_key');
+
+        this.cavernPortal = this.physics.add.staticSprite(2480, 720, 'ground-tile');
+        this.cavernPortal.setTint(hasKey ? 0xAA66FF : 0x666666);
+        this.cavernPortal.setScale(2.5);
+        this.cavernPortal.refreshBody();
+
+        this.tweens.add({
+            targets: this.cavernPortal,
+            alpha: 0.5,
+            duration: 700,
+            yoyo: true,
+            repeat: -1,
+            ease: 'Sine.easeInOut'
+        });
+
+        this.cavernPortalLabel = this.add.text(2480, 660,
+            hasKey ? 'Conditional Caverns ->' : '\u{1F512} Needs the Boss Key',
             {
-                fontSize: '22px',
+                fontSize: '20px',
                 fontFamily: 'monospace',
-                color: hasKey ? '#00FFFF' : '#aaaaaa',
+                color: hasKey ? '#AA66FF' : '#aaaaaa',
                 stroke: '#000000',
                 strokeThickness: 4
             }
@@ -171,15 +173,15 @@ export default class PrintForestScene extends Phaser.Scene {
     // Spawns the boss's key in the world once the boss is defeated, until
     // the player walks over and picks it up
     createBossKey() {
-        const bossDefeated = window.gameState.isEnemyDefeated('boss1');
-        const keyCollected = window.gameState.hasKey('boss1_key');
+        const bossDefeated = window.gameState.isEnemyDefeated('boss2');
+        const keyCollected = window.gameState.hasKey('boss2_key');
 
         if (!bossDefeated || keyCollected) {
             this.bossKey = null;
             return;
         }
 
-        this.bossKey = this.physics.add.staticSprite(2200, 1200, 'key-item');
+        this.bossKey = this.physics.add.staticSprite(2200, 1150, 'key-item');
         this.bossKey.setScale(2.5);
         this.bossKey.refreshBody();
 
@@ -192,7 +194,7 @@ export default class PrintForestScene extends Phaser.Scene {
             ease: 'Sine.easeInOut'
         });
 
-        this.add.text(2200, 1150, 'Boss Key', {
+        this.add.text(2200, 1100, 'Boss Key', {
             fontSize: '16px',
             fontFamily: 'monospace',
             color: '#FFD700',
@@ -204,13 +206,13 @@ export default class PrintForestScene extends Phaser.Scene {
     collectBossKey() {
         if (!this.bossKey) return;
 
-        window.gameState.collectKey('boss1_key');
+        window.gameState.collectKey('boss2_key');
         this.bossKey.destroy();
         this.bossKey = null;
 
         // Unlock the portal immediately, no need to re-enter the zone
-        this.loopPortal.setTint(0x00FFFF);
-        if (this.portalLabel) this.portalLabel.setText('Loop Forest ->').setColor('#00FFFF');
+        this.cavernPortal.setTint(0xAA66FF);
+        if (this.cavernPortalLabel) this.cavernPortalLabel.setText('Conditional Caverns ->').setColor('#AA66FF');
 
         const message = this.add.text(this.player.x, this.player.y - 60,
             '\u{1F511} Got the Boss Key!', {
@@ -230,82 +232,71 @@ export default class PrintForestScene extends Phaser.Scene {
             onComplete: () => message.destroy()
         });
     }
-    
+
     createPlayer() {
-        // Get saved player position or use default
         const position = window.gameState.getPlayerPosition();
-        
-        // Create player sprite for top-down view
+
         this.player = this.physics.add.sprite(position.x, position.y, 'hero');
         this.player.setCollideWorldBounds(true);
-        this.player.setScale(0.1);  // Increased from 1.2 to 2.0
-        
-        // Set up physics properties for top-down
+        this.player.setScale(0.1);
+
         this.player.setBounce(0);
-        this.player.setDrag(300); // Add drag for smooth movement
-        this.player.body.setSize(20, 20); // Circular hitbox for top-down
-        
-        // Add player shadow for depth
-        this.playerShadow = this.add.ellipse(150, 520, 40, 20, 0x000000, 0.3);  // Increased shadow size
-        
-        // Add player name
+        this.player.setDrag(300);
+        this.player.body.setSize(20, 20);
+
+        this.playerShadow = this.add.ellipse(position.x, position.y + 20, 40, 20, 0x000000, 0.3);
+
         this.playerNameText = this.add.text(0, -40, 'Python Hero', {
-            fontSize: '18px',  // Increased from 12px to 18px
+            fontSize: '18px',
             fontFamily: 'monospace',
             color: '#ffffff',
             stroke: '#000000',
-            strokeThickness: 3  // Increased from 2 to 3
+            strokeThickness: 3
         }).setOrigin(0.5);
-        
-        // Make name follow player
+
         this.player.nameText = this.playerNameText;
 
-        // Movement speed
         this.player.moveSpeed = 200;
     }
-    
-    createTutorialEnemies() {
+
+    createEnemies() {
         this.enemies = this.physics.add.group();
-        
-        // Create slimes positioned for top-down view
+
         const slimeData = [
-            { x: 500, y: 700, name: 'Print Slime', difficulty: 'easy', id: 'slime1', stats: { maxHp: 30, damage: 5, xp: 10 } },
-            { x: 1000, y: 500, name: 'Variable Slime', difficulty: 'easy', id: 'slime2', stats: { maxHp: 40, damage: 8, xp: 15 } },
-            { x: 1600, y: 900, name: 'Loop Slime', difficulty: 'easy', id: 'slime3', stats: { maxHp: 45, damage: 9, xp: 18 } },
-            { x: 2200, y: 1200, name: 'Boss: Syntax Error', difficulty: 'medium', id: 'boss1', stats: { maxHp: 60, damage: 12, xp: 30 } }
+            { x: 600, y: 500, name: 'For Loop Treant', difficulty: 'easy', id: 'loop1', stats: { maxHp: 45, damage: 9, xp: 18 } },
+            { x: 1100, y: 950, name: 'While Loop Treant', difficulty: 'easy', id: 'loop2', stats: { maxHp: 50, damage: 10, xp: 20 } },
+            { x: 1900, y: 500, name: 'Range Sapling', difficulty: 'easy', id: 'loop3', stats: { maxHp: 40, damage: 8, xp: 16 } },
+            { x: 2200, y: 1150, name: 'Boss: Infinite Loop Tree', difficulty: 'medium', id: 'boss2', stats: { maxHp: 80, damage: 15, xp: 40 } }
         ];
-        
+
         slimeData.forEach(data => {
-            // Skip if enemy has been defeated
             if (window.gameState.isEnemyDefeated(data.id)) {
                 return;
             }
-            
-            // Shadow drawn before the sprite so it renders underneath, not over it
-            const shadow = this.add.ellipse(data.x, data.y + 15, 45, 23, 0x000000, 0.3);  // Increased shadow size
 
-            const enemy = this.enemies.create(data.x, data.y, 'slime');
-            enemy.setScale(2.0);  // Increased from 1.2 to 2.0
+            // Shadow drawn before the sprite so it renders underneath, not over the face
+            const shadow = this.add.ellipse(data.x, data.y + 22, 45, 16, 0x000000, 0.3);
+
+            const enemy = this.enemies.create(data.x, data.y, 'tree-enemy');
+            enemy.setScale(2.0);
             enemy.name = data.name;
             enemy.difficulty = data.difficulty;
             enemy.id = data.id;
             enemy.stats = data.stats;
-            enemy.body.setSize(24, 24); // Circular hitbox for top-down
+            enemy.body.setSize(24, 24);
             enemy.shadow = shadow;
-            
-            // Add enemy name
+
             const nameText = this.add.text(data.x, data.y - 35, data.name, {
-                fontSize: '16px',  // Increased from 10px to 16px
+                fontSize: '16px',
                 fontFamily: 'monospace',
-                color: data.difficulty === 'medium' ? '#ff0000' : '#ffff00',
+                color: data.difficulty === 'medium' ? '#ff0000' : '#90EE90',
                 stroke: '#000000',
-                strokeThickness: 3  // Increased from 2 to 3
+                strokeThickness: 3
             }).setOrigin(0.5);
-            
+
             enemy.nameText = nameText;
-            
-            // Different patrol patterns for variety
-            if (data.id === 'slime1') {
+
+            if (data.id === 'loop1') {
                 // Horizontal patrol
                 this.tweens.add({
                     targets: enemy,
@@ -321,7 +312,7 @@ export default class PrintForestScene extends Phaser.Scene {
                         shadow.y = enemy.y + 10;
                     }
                 });
-            } else if (data.id === 'slime2') {
+            } else if (data.id === 'loop2') {
                 // Vertical patrol
                 this.tweens.add({
                     targets: enemy,
@@ -337,13 +328,13 @@ export default class PrintForestScene extends Phaser.Scene {
                         shadow.y = enemy.y + 10;
                     }
                 });
-            } else if (data.id === 'slime3') {
-                // Circular patrol
+            } else if (data.id === 'loop3') {
+                // Circular patrol - fitting for a "Range" enemy
                 let angle = 0;
                 const centerX = enemy.x;
                 const centerY = enemy.y;
                 const radius = 60;
-                
+
                 this.time.addEvent({
                     delay: 50,
                     loop: true,
@@ -357,12 +348,12 @@ export default class PrintForestScene extends Phaser.Scene {
                         shadow.y = enemy.y + 10;
                     }
                 });
-            } else if (data.id === 'boss1') {
-                // Figure-8 patrol for boss
+            } else if (data.id === 'boss2') {
+                // Figure-8 patrol for the boss
                 let t = 0;
                 const centerX = enemy.x;
                 const centerY = enemy.y;
-                
+
                 this.time.addEvent({
                     delay: 50,
                     loop: true,
@@ -379,68 +370,45 @@ export default class PrintForestScene extends Phaser.Scene {
             }
         });
     }
-    
-    setupCollisions() {
-        // Player collides with walls
-        this.physics.add.collider(this.player, this.walls);
-        
-        // Enemies collide with walls
-        this.physics.add.collider(this.enemies, this.walls);
-        
-        // Player collides with trees
-        this.physics.add.collider(this.player, this.trees);
-        
-        // Enemies collide with trees
-        this.physics.add.collider(this.enemies, this.trees);
-        
-        // Enemies collide with each other
-        this.physics.add.collider(this.enemies, this.enemies);
-        
-        // Player overlaps with enemies (triggers battle)
-        this.physics.add.overlap(this.player, this.enemies, this.startBattle, null, this);
-        
-        // Player overlaps with sign
-        this.physics.add.overlap(this.player, this.sign, this.showSignMessage, null, this);
 
-        // Player overlaps with the portal to Loop Forest
-        this.physics.add.overlap(this.player, this.loopPortal, this.enterLoopForest, null, this);
+    setupCollisions() {
+        this.physics.add.collider(this.player, this.walls);
+        this.physics.add.collider(this.enemies, this.walls);
+        this.physics.add.collider(this.player, this.trees);
+        this.physics.add.collider(this.enemies, this.trees);
+        this.physics.add.collider(this.enemies, this.enemies);
+
+        this.physics.add.overlap(this.player, this.enemies, this.startBattle, null, this);
+        this.physics.add.overlap(this.player, this.sign, this.showSignMessage, null, this);
+        this.physics.add.overlap(this.player, this.printPortal, this.enterPrintForest, null, this);
+        this.physics.add.overlap(this.player, this.cavernPortal, this.enterConditionalCaverns, null, this);
 
         // Player overlaps with the boss's dropped key, if it's out there
         if (this.bossKey) {
             this.physics.add.overlap(this.player, this.bossKey, this.collectBossKey, null, this);
         }
     }
-    
+
     setupControls() {
-        // Keyboard controls
         this.cursors = this.input.keyboard.createCursorKeys();
         this.wasd = this.input.keyboard.addKeys('W,S,A,D');
-        
-        // Add interaction key
         this.interactKey = this.input.keyboard.addKey('E');
-        
-        // Add run/sprint key
         this.shiftKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SHIFT);
 
-        // Add ESC key for pause menu
         this.input.keyboard.on('keydown-ESC', () => {
-            console.log('ESC pressed - opening pause menu');
             this.scene.pause();
             this.scene.launch('PauseMenuScene', {
-                returnScene: 'PrintForestScene'
+                returnScene: 'LoopForestScene'
             });
-            console.log('returnscene:', 'PrintForestScene');
         });
     }
-    
-    showTutorialMessage() {
-        const tutorialText = this.add.text(1280, 360,
-            'Welcome to Chronicles of Py!\n\n' +
-            'Use ARROW KEYS or WASD to move in any direction\n' +
-            'Hold SHIFT to run faster\n' +
-            'Walk into enemies to battle\n' +
-            'Defeat enemies by writing Python code!\n\n' +
-            'Start with the Print Slime to learn the basics!',
+
+    showZoneMessage() {
+        const introText = this.add.text(1280, 360,
+            'Welcome to the Loop Forest!\n\n' +
+            'These enemies take more than one hit.\n' +
+            'Use for and while loops to attack repeatedly!\n\n' +
+            'Defeat For Loop Treant to get started!',
             {
                 fontSize: '28px',
                 fontFamily: 'monospace',
@@ -450,16 +418,15 @@ export default class PrintForestScene extends Phaser.Scene {
             }
         ).setOrigin(0.5);
 
-        const panel = createPanel(this, 1280, 360, tutorialText.width + 60, tutorialText.height + 60, { radius: 18 });
-        tutorialText.setDepth(1);
+        const panel = createPanel(this, 1280, 360, introText.width + 60, introText.height + 60, { radius: 18 });
+        introText.setDepth(1);
 
-        // Fade out after 5 seconds
         this.time.delayedCall(5000, () => {
             this.tweens.add({
-                targets: [tutorialText, panel],
+                targets: [introText, panel],
                 alpha: 0,
                 duration: 1000,
-                onComplete: () => { tutorialText.destroy(); panel.destroy(); }
+                onComplete: () => { introText.destroy(); panel.destroy(); }
             });
         });
     }
@@ -468,9 +435,9 @@ export default class PrintForestScene extends Phaser.Scene {
         if (!this.signShown) {
             this.signShown = true;
             const message = this.add.text(150, 350,
-                'Tutorial Tip:\n' +
-                'Use print("Hello") to attack!\n' +
-                'The more you print, the more damage!',
+                'Loop Tip:\n' +
+                'for i in range(3):\n    print("Strike!")\n' +
+                'The more iterations, the more damage!',
                 {
                     fontSize: '22px',
                     fontFamily: 'monospace',
@@ -493,15 +460,12 @@ export default class PrintForestScene extends Phaser.Scene {
             });
         }
     }
-    
+
     startBattle(player, enemy) {
-        // Disable enemy to prevent multiple triggers
         enemy.disableBody(true, false);
 
-        // Save player position before battle
         window.gameState.savePlayerPosition(this.player.x, this.player.y);
 
-        // Store enemy data for battle
         window.gameState.currentEnemy = {
             name: enemy.name,
             difficulty: enemy.difficulty,
@@ -510,42 +474,53 @@ export default class PrintForestScene extends Phaser.Scene {
             stats: enemy.stats
         };
 
-        // Remember which zone to return to after the battle
-        window.gameState.battleReturnScene = 'PrintForestScene';
+        window.gameState.battleReturnScene = 'LoopForestScene';
 
-        // Fade out and start battle. The transition runs off a timer rather
-        // than the 'camerafadeoutcomplete' event - that event can fail to
-        // fire (observed under software/headless rendering), which would
+        // The transition runs off a timer rather than the
+        // 'camerafadeoutcomplete' event - that event can fail to fire
+        // (observed under software/headless rendering), which would
         // otherwise strand the player on a faded-out screen forever.
         this.cameras.main.fade(500, 0, 0, 0);
         this.time.delayedCall(500, () => {
-            // Clean up name texts
             enemy.nameText.destroy();
             enemy.destroy();
 
-            // Switch to battle scene
             this.scene.stop('UIScene');
             this.scene.switch('BattleScene');
         });
     }
 
-    enterLoopForest() {
+    enterPrintForest() {
+        if (this.zoneTransitioning) return;
+        this.zoneTransitioning = true;
+
+        // Spawn the player near the Print Forest's portal, away from its trigger zone
+        window.gameState.savePlayerPosition(2350, 720);
+
+        this.cameras.main.fade(500, 0, 0, 0);
+        this.time.delayedCall(500, () => {
+            this.scene.stop('UIScene');
+            this.scene.start('PrintForestScene');
+        });
+    }
+
+    enterConditionalCaverns() {
         if (this.zoneTransitioning) return;
 
-        if (!window.gameState.hasKey('boss1_key')) {
+        if (!window.gameState.hasKey('boss2_key')) {
             this.showSealedPortalMessage();
             return;
         }
 
         this.zoneTransitioning = true;
 
-        // Spawn the player near the Loop Forest's entrance, away from its portal
+        // Spawn the player near the Caverns' entrance, away from its portal
         window.gameState.savePlayerPosition(150, 720);
 
         this.cameras.main.fade(500, 0, 0, 0);
         this.time.delayedCall(500, () => {
             this.scene.stop('UIScene');
-            this.scene.start('LoopForestScene');
+            this.scene.start('ConditionalCavernsScene');
         });
     }
 
@@ -555,12 +530,12 @@ export default class PrintForestScene extends Phaser.Scene {
 
         this.cameras.main.shake(150, 0.003);
 
-        const bossDefeated = window.gameState.isEnemyDefeated('boss1');
+        const bossDefeated = window.gameState.isEnemyDefeated('boss2');
         const sealedText = bossDefeated
             ? '\u{1F512} Sealed!\nGo pick up the Boss Key it dropped.'
-            : '\u{1F512} Sealed!\nDefeat Boss: Syntax Error for its key.';
+            : '\u{1F512} Sealed!\nDefeat Boss: Infinite Loop Tree for its key.';
 
-        const message = this.add.text(this.loopPortal.x, this.loopPortal.y - 90, sealedText, {
+        const message = this.add.text(this.cavernPortal.x, this.cavernPortal.y - 90, sealedText, {
             fontSize: '22px',
             fontFamily: 'monospace',
             color: '#ff6b6b',
@@ -568,7 +543,7 @@ export default class PrintForestScene extends Phaser.Scene {
             padding: { x: 15, y: 15 }
         }).setOrigin(0.5).setDepth(1);
 
-        const panel = createPanel(this, this.loopPortal.x, this.loopPortal.y - 90,
+        const panel = createPanel(this, this.cavernPortal.x, this.cavernPortal.y - 90,
             message.width + 40, message.height + 30, { radius: 14, borderColor: COLORS.danger });
 
         this.time.delayedCall(2000, () => {
@@ -584,44 +559,37 @@ export default class PrintForestScene extends Phaser.Scene {
             });
         });
     }
-    
+
     update() {
         if (!this.player) return;
-        
-        // Player movement for top-down view
+
         const baseSpeed = this.player.moveSpeed;
-        const speed = this.shiftKey.isDown ? baseSpeed * 1.5 : baseSpeed; // Sprint when holding shift
-        
-        // 8-directional movement
+        const speed = this.shiftKey.isDown ? baseSpeed * 1.5 : baseSpeed;
+
         let velocityX = 0;
         let velocityY = 0;
-        
-        // Horizontal movement
+
         if (this.cursors.left.isDown || this.wasd.A.isDown) {
             velocityX = -speed;
-            this.player.setFlipX(true); // Face left
+            this.player.setFlipX(true);
         } else if (this.cursors.right.isDown || this.wasd.D.isDown) {
             velocityX = speed;
-            this.player.setFlipX(false); // Face right
+            this.player.setFlipX(false);
         }
-        
-        // Vertical movement
+
         if (this.cursors.up.isDown || this.wasd.W.isDown) {
             velocityY = -speed;
         } else if (this.cursors.down.isDown || this.wasd.S.isDown) {
             velocityY = speed;
         }
-        
-        // Normalize diagonal movement
+
         if (velocityX !== 0 && velocityY !== 0) {
-            velocityX *= 0.707; // 1/sqrt(2)
+            velocityX *= 0.707;
             velocityY *= 0.707;
         }
-        
-        // Apply velocity
+
         this.player.setVelocity(velocityX, velocityY);
-        
-        // Add walking animation effect (subtle scale bounce)
+
         if (velocityX !== 0 || velocityY !== 0) {
             if (!this.walkingTween || !this.walkingTween.isPlaying()) {
                 this.walkingTween = this.tweens.add({
@@ -634,26 +602,21 @@ export default class PrintForestScene extends Phaser.Scene {
                     ease: 'Sine.easeInOut'
                 });
             }
-        } else {
-            // Stop walking animation
-            if (this.walkingTween) {
-                this.walkingTween.stop();
-                this.player.setScale(this.player.flipX ? -0.15 : 0.15, 0.15);
-            }
+        } else if (this.walkingTween) {
+            this.walkingTween.stop();
+            this.player.setScale(this.player.flipX ? -0.15 : 0.15, 0.15);
         }
-        
-        // Update player name and shadow positions
+
         if (this.player.nameText) {
             this.player.nameText.x = this.player.x;
             this.player.nameText.y = this.player.y - 30;
         }
-        
+
         if (this.playerShadow) {
             this.playerShadow.x = this.player.x;
             this.playerShadow.y = this.player.y + 10;
         }
-        
-        // Add sprint particles effect
+
         if (this.shiftKey.isDown && (velocityX !== 0 || velocityY !== 0)) {
             if (Math.random() < 0.3) {
                 const particle = this.add.circle(
@@ -663,7 +626,7 @@ export default class PrintForestScene extends Phaser.Scene {
                     0xFFFFFF,
                     0.5
                 );
-                
+
                 this.tweens.add({
                     targets: particle,
                     alpha: 0,
@@ -673,8 +636,7 @@ export default class PrintForestScene extends Phaser.Scene {
                 });
             }
         }
-        
-        // Save player position periodically (every 60 frames, roughly once per second at 60fps)
+
         if (!this.saveTimer) {
             this.saveTimer = 0;
         }

@@ -1,0 +1,17 @@
+Tiles and sprites in this directory are built from two Kenney asset packs
+by Kenney Vleugels (www.kenney.nl):
+
+1. "Roguelike/RPG Pack" (https://kenney.nl/assets/roguelike-rpg-pack)
+   - tree_*.png, bush_round.png, flower_*.png, ground_*.png
+   - with help by Lynn Evers
+
+2. "Monster Builder Pack" (https://kenney.nl/assets/monster-builder-pack)
+   - if_golem.png, else_wraith.png, boss_exception.png
+   - these are hand-composited from that pack's modular body/eye/mouth/
+     detail parts (not shipped as pre-made monsters)
+
+License: Creative Commons Zero (CC0) 1.0 Universal
+https://creativecommons.org/publicdomain/zero/1.0/
+
+These assets may be used freely in personal and commercial projects.
+Credit is appreciated but not required.
