@@ -1,3 +1,6 @@
+import { createHeroAnimations, createHeroAttackAnimation } from '../heroAnim.js';
+import { createEnemyAnimations } from '../enemyAnim.js';
+
 // Preload Scene - Load all game assets
 export default class PreloadScene extends Phaser.Scene {
     constructor() {
@@ -43,8 +46,45 @@ export default class PreloadScene extends Phaser.Scene {
         });
 
         // LOAD ACTUAL IMAGE FILES HERE
-        this.load.image('hero', '/static/game/assets/sprites/hero.png');
-        this.load.image('grass-tile', '/static/game/assets/level_background/grass.png');
+        // PixelLab-generated 8-direction hero with a real walk cycle,
+        // replacing the earlier single soft-edged static portrait - see
+        // heroAnim.js for the frame grid layout
+        this.load.spritesheet('hero', '/static/game/assets/sprites/hero_walk.png', { frameWidth: 128, frameHeight: 128 });
+
+        // Print Forest's background (PixelLab pro) - the ruined brick
+        // buildings, garden walls, and trees are painted directly into this
+        // single scene instead of composited as separate sprites, so
+        // collision in PrintForestScene is placed to match what's actually
+        // drawn here (see PrintForestScene.createFirstLevel)
+        this.load.image('forest-background-ruins', '/static/game/assets/level_background/forest_background_v2.png');
+
+        // Loop Forest's background (PixelLab pro) - a cool moonlit clearing
+        // with tree rings and a standing-stone circle painted directly in,
+        // echoing the "loop" theme; collision in LoopForestScene matches
+        // what's actually drawn (see LoopForestScene.createLevel)
+        this.load.image('loop-forest-background', '/static/game/assets/level_background/loop_forest_background.png');
+
+        // Battle-scene backdrops (PixelLab) - proper illustrated JRPG battle
+        // screens, 2 variants per zone picked at random in BattleScene,
+        // replacing the earlier stand-in that just stretched the ground
+        // texture (see marketing/battle_background_prompt.md)
+        this.load.image('battle-forest-clearing', '/static/game/assets/level_background/battle_forest_clearing.png');
+        this.load.image('battle-forest-outcrop', '/static/game/assets/level_background/battle_forest_outcrop.png');
+        this.load.image('battle-cavern-tunnel', '/static/game/assets/level_background/battle_cavern_tunnel.png');
+        this.load.image('battle-cavern-crystals', '/static/game/assets/level_background/battle_cavern_crystals.png');
+
+        // Ground/terrain textures - user-generated pixel art. Two variants
+        // per biome so zones can patchwork between them instead of tiling
+        // one texture into an obviously-repeating pattern. Still used as the
+        // BattleScene backdrop stand-in until dedicated battle-scene art
+        // exists (see marketing/battle_background_prompt.md).
+        this.load.image('forest-ground-a', '/static/game/assets/level_background/forest_ground_a.png');
+        this.load.image('forest-ground-b', '/static/game/assets/level_background/forest_ground_b.png');
+
+        // Conditional Caverns - single cohesive level background (PixelLab
+        // pro), with the watchtower ruin and boulders painted directly into
+        // the scene rather than composited as separate sprites
+        this.load.image('cave-background-v2', '/static/game/assets/level_background/cave_background_v2.png');
 
         // Kenney "Roguelike/RPG Pack" tiles (CC0) - see assets/kenney/LICENSE.txt
         this.load.image('k-tree-round', '/static/game/assets/kenney/tree_round.png');
@@ -55,15 +95,30 @@ export default class PreloadScene extends Phaser.Scene {
         this.load.image('k-bush-round', '/static/game/assets/kenney/bush_round.png');
         this.load.image('k-flower-blue', '/static/game/assets/kenney/flower_blue.png');
         this.load.image('k-flower-orange', '/static/game/assets/kenney/flower_orange.png');
-        this.load.image('k-ground-green', '/static/game/assets/kenney/ground_green.png');
-        this.load.image('k-ground-gray', '/static/game/assets/kenney/ground_gray.png');
-        this.load.image('k-ground-tan', '/static/game/assets/kenney/ground_tan.png');
-        this.load.image('k-ground-brown', '/static/game/assets/kenney/ground_brown.png');
 
-        // Kenney "Monster Builder Pack" (CC0) - hand-composited creatures
-        this.load.image('k-enemy-if-golem', '/static/game/assets/kenney/if_golem.png');
-        this.load.image('k-enemy-else-wraith', '/static/game/assets/kenney/else_wraith.png');
-        this.load.image('k-enemy-boss-exception', '/static/game/assets/kenney/boss_exception.png');
+        // Enemy sprites (PixelLab) - each is a 9-frame spritesheet: frame 0
+        // is the idle/overworld pose, frames 1-8 are an attack animation
+        // played in BattleScene (see heroAnim.js-style animation setup in
+        // BattleScene.createBattleUI/enemy attack handling). Conditional
+        // Caverns enemies kept their original look, only gaining the attack
+        // animation; Print Forest and Loop Forest got new designs too.
+        this.load.spritesheet('enemy-if-golem', '/static/game/assets/enemies/if_golem_attack.png', { frameWidth: 96, frameHeight: 96 });
+        this.load.spritesheet('enemy-elif-checker', '/static/game/assets/enemies/elif_checker_attack.png', { frameWidth: 96, frameHeight: 96 });
+        this.load.spritesheet('enemy-else-wraith', '/static/game/assets/enemies/else_wraith_attack.png', { frameWidth: 96, frameHeight: 96 });
+        this.load.spritesheet('enemy-boss-dragon', '/static/game/assets/enemies/dragon_boss_attack.png', { frameWidth: 96, frameHeight: 96 });
+
+        this.load.spritesheet('enemy-slime', '/static/game/assets/enemies/slime_attack.png', { frameWidth: 96, frameHeight: 96 });
+        this.load.spritesheet('enemy-boss-glitch', '/static/game/assets/enemies/glitch_boss_attack.png', { frameWidth: 160, frameHeight: 160 });
+        this.load.spritesheet('enemy-treant', '/static/game/assets/enemies/treant_attack.png', { frameWidth: 96, frameHeight: 96 });
+        this.load.spritesheet('enemy-boss-treant', '/static/game/assets/enemies/treant_boss_attack.png', { frameWidth: 160, frameHeight: 160 });
+
+        // Hero's battle attack animation - separate sheet from the walk
+        // cycle since v3 custom animations render on their own canvas size
+        this.load.spritesheet('hero-attack', '/static/game/assets/sprites/hero_attack.png', { frameWidth: 164, frameHeight: 164 });
+
+        // Spell VFX (FreePixel.art, free commercial use) - see assets/vfx/LICENSE.txt
+        this.load.image('fx-fireball', '/static/game/assets/vfx/fireball.png');
+        this.load.image('fx-lightning', '/static/game/assets/vfx/thunder_bolt.png');
         
         // Don't load any external files - we'll create everything programmatically
         // Just trigger the load complete event
@@ -73,6 +128,12 @@ export default class PreloadScene extends Phaser.Scene {
     create() {
         // Create colored rectangles for game sprites
         this.createGameTextures();
+
+        // Register the hero's directional walk/attack animations, and every
+        // enemy's attack animation, once, globally
+        createHeroAnimations(this);
+        createHeroAttackAnimation(this);
+        createEnemyAnimations(this);
     }
     
     createGameTextures() {

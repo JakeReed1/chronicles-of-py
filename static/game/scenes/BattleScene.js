@@ -1,4 +1,6 @@
 import { COLORS, TEXT, createPanel, createButton, createBar, createGlowTitle } from '../theme.js';
+import { HERO_ATTACK_ANIM_KEY } from '../heroAnim.js';
+import { enemyAttackAnimKey } from '../enemyAnim.js';
 
 // Battle Scene - Python-powered combat!
 export default class BattleScene extends Phaser.Scene {
@@ -7,21 +9,34 @@ export default class BattleScene extends Phaser.Scene {
     }
 
     create() {
+        // The overworld's HUD (level/HP/XP bar) would otherwise keep running
+        // in parallel and show a second, redundant player indicator on top
+        // of this scene's own player panel
+        this.scene.stop('UIScene');
+
         // Get game dimensions
         const { width, height } = this.cameras.main;
         this.gameWidth = width;
         this.gameHeight = height;
 
-        // Battle background - subtle gradient plus a faint "code grid"
-        const bg = this.add.graphics();
-        bg.fillGradientStyle(COLORS.bgDark, COLORS.bgDark, COLORS.bgDarkAlt, COLORS.bgDarkAlt, 1);
-        bg.fillRect(0, 0, width, height);
+        // Battle background matches the zone the fight is taking place in -
+        // proper illustrated JRPG battle backdrops (PixelLab), picked at
+        // random from each zone's 2-3 variants so the same fight doesn't
+        // always show an identical backdrop. Dimmed with a plain dark
+        // overlay (rather than a color-shifting gradient) so the art still
+        // reads through while staying dark enough for the battle UI text.
+        const returnScene = window.gameState.battleReturnScene || 'PrintForestScene';
+        const zoneBackgrounds = {
+            PrintForestScene: { textures: ['battle-forest-clearing', 'battle-forest-outcrop'], tint: null },
+            LoopForestScene: { textures: ['battle-forest-clearing', 'battle-forest-outcrop'], tint: 0x88ccff },
+            ConditionalCavernsScene: { textures: ['battle-cavern-tunnel', 'battle-cavern-crystals'], tint: null }
+        };
+        const zoneBg = zoneBackgrounds[returnScene] || zoneBackgrounds.PrintForestScene;
 
-        const gridSize = Math.floor(width / 40);
-        for (let i = 0; i < gridSize; i++) {
-            this.add.line(width / 2, height / 2, 0, i * (height / 20), width, i * (height / 20), 0x16213e, 0.3);
-            this.add.line(width / 2, height / 2, i * (width / gridSize), 0, i * (width / gridSize), height, 0x16213e, 0.3);
-        }
+        const bgImage = this.add.image(width / 2, height / 2, Phaser.Math.RND.pick(zoneBg.textures)).setDisplaySize(width, height);
+        if (zoneBg.tint) bgImage.setTint(zoneBg.tint);
+
+        const bg = this.add.rectangle(width / 2, height / 2, width, height, 0x000000, 0.35);
 
         // Title
         createGlowTitle(this, width / 2, height * 0.05, 'PYTHON BATTLE!', {
@@ -55,11 +70,12 @@ export default class BattleScene extends Phaser.Scene {
         const fontSize = Math.max(14, Math.floor(width / 100));
         const smallFontSize = Math.max(12, Math.floor(width / 120));
 
-        // Player status panel - left side, aligned with sprite
+        // Player status panel - up and to the left of the sprite so its
+        // tall hair doesn't overlap the panel
         const panelWidth = width * 0.2;
         const panelHeight = height * 0.12;
-        const playerPanelX = width * 0.15;
-        const playerPanelY = height * 0.15;
+        const playerPanelX = width * 0.1;
+        const playerPanelY = height * 0.08;
 
         createPanel(this, playerPanelX, playerPanelY, panelWidth, panelHeight, {
             borderColor: COLORS.hp,
@@ -131,10 +147,11 @@ export default class BattleScene extends Phaser.Scene {
             wordWrap: { width: width * 0.7 }
         }).setOrigin(0.5);
 
-        // Python output display - positioned right above the code editor
-        const outputY = height * 0.65;
+        // Python output display - positioned right above the code editor.
+        // Slightly shorter than before to leave room for the larger editor.
+        const outputY = height * 0.63;
         const outputWidth = width * 0.6;
-        const outputHeight = height * 0.15;
+        const outputHeight = height * 0.13;
 
         createPanel(this, width / 2, outputY, outputWidth, outputHeight, {
             fillColor: 0x1a1a2e,
@@ -184,13 +201,17 @@ export default class BattleScene extends Phaser.Scene {
         const { width, height } = this.cameras.main;
         const spriteY = height * 0.3; // Both sprites at the same height
 
-        this.playerSprite = this.add.sprite(width * 0.25, spriteY, 'hero');
-        this.playerSprite.setScale(0.5); // Scale based on screen size
+        // Frame 0 is the hero's idle south-facing pose (see heroAnim.js).
+        // 4 would match the old single 1024px portrait's on-screen size;
+        // scaled down 20% from that per request.
+        const playerScale = 3.2;
+        this.playerSprite = this.add.sprite(width * 0.25, spriteY, 'hero', 0);
+        this.playerSprite.setScale(playerScale);
 
         // Add idle animation to player (subtle breathing effect)
         this.tweens.add({
             targets: this.playerSprite,
-            scaleY: 0.5 * 1.05,
+            scaleY: playerScale * 1.05,
             duration: 1500,
             yoyo: true,
             repeat: -1,
@@ -198,14 +219,13 @@ export default class BattleScene extends Phaser.Scene {
         });
 
         // Enemy sprite - use whichever texture the overworld enemy actually had.
-        // Source textures range from tiny 32px procedural sprites to full-size
-        // 165px composited monsters, so the scale is computed from the actual
-        // texture width to land on a consistent on-screen size either way.
-        const enemyTextureKey = this.currentEnemy.sprite || 'slime';
-        const enemyTextureWidth = this.textures.get(enemyTextureKey).getSourceImage().width;
+        // Each is a 9-frame spritesheet (frame 0 = idle, 1-8 = attack), so
+        // the scale is computed from a single frame's width, not the sheet.
+        const enemyTextureKey = this.currentEnemy.sprite || 'enemy-slime';
+        const enemyTextureWidth = this.textures.get(enemyTextureKey).get(0).width;
         const enemyScale = 320 / enemyTextureWidth;
 
-        this.enemySprite = this.add.sprite(width * 0.75, spriteY, enemyTextureKey);
+        this.enemySprite = this.add.sprite(width * 0.75, spriteY, enemyTextureKey, 0);
         this.enemySprite.setScale(enemyScale);
 
         // Add idle animation to enemy (bouncing effect)
@@ -228,13 +248,21 @@ export default class BattleScene extends Phaser.Scene {
 
     createCodeEditor() {
         const { width, height } = this.cameras.main;
-        const fontSize = Math.max(14, Math.floor(width / 100));
+        const fontSize = Math.max(13, Math.floor(width / 115));
 
-        // Code editor background - scale to screen size
-        const editorWidth = width * 0.7;
-        const editorHeight = height * 0.15;  // Reduced height
+        // Code editor background - scale to screen size. Stored on the
+        // instance (rather than recomputed) so updateCodeDisplay() and
+        // showCodeHint() can't drift out of sync with these values.
+        const editorWidth = width * 0.78;
+        const editorHeight = height * 0.22;
         const editorX = width / 2;
-        const editorY = height * 0.88;  // Moved to bottom
+        const editorY = height * 0.84;
+        this.editorWidth = editorWidth;
+        this.editorHeight = editorHeight;
+        this.editorX = editorX;
+        this.editorY = editorY;
+        this.editorFontSize = fontSize;
+        this.editorLeftEdge = editorX - editorWidth / 2;
 
         const editorPanel = createPanel(this, editorX, editorY, editorWidth, editorHeight, {
             fillColor: 0x1e1e1e,
@@ -271,6 +299,7 @@ export default class BattleScene extends Phaser.Scene {
 
         // Initialize code input
         this.userCode = '';
+        this.cursorPos = 0;
         this.cursorVisible = true;
 
         // Create blinking cursor - adjusted position
@@ -330,6 +359,7 @@ export default class BattleScene extends Phaser.Scene {
             fontSize: Math.max(14, Math.floor(width / 100)),
             onClick: () => {
                 this.userCode = '';
+                this.cursorPos = 0;
                 this.updateCodeDisplay();
             }
         });
@@ -449,15 +479,21 @@ export default class BattleScene extends Phaser.Scene {
                 this.executeCode();
                 return;
             } else if (key === 'Enter') {
-                // Add new line
-                this.userCode += '\n';
+                this.insertAtCursor('\n');
             } else if (key === 'Backspace') {
-                // Remove last character
-                this.userCode = this.userCode.slice(0, -1);
+                // Remove the character before the cursor, not just the last
+                // character in the string - lets recalled/older code be
+                // edited anywhere, not only trimmed from the end
+                if (this.cursorPos > 0) {
+                    this.userCode = this.userCode.slice(0, this.cursorPos - 1) + this.userCode.slice(this.cursorPos);
+                    this.cursorPos--;
+                }
+            } else if (key === 'Delete') {
+                this.userCode = this.userCode.slice(0, this.cursorPos) + this.userCode.slice(this.cursorPos + 1);
             } else if (key === 'Tab') {
                 // Add 4 spaces for indentation
                 event.preventDefault();
-                this.userCode += '    ';
+                this.insertAtCursor('    ');
             } else if (key === 'ArrowUp') {
                 event.preventDefault();
                 this.recallHistory(-1);
@@ -466,17 +502,38 @@ export default class BattleScene extends Phaser.Scene {
                 event.preventDefault();
                 this.recallHistory(1);
                 return;
+            } else if (key === 'ArrowLeft') {
+                this.cursorPos = Math.max(0, this.cursorPos - 1);
+            } else if (key === 'ArrowRight') {
+                this.cursorPos = Math.min(this.userCode.length, this.cursorPos + 1);
+            } else if (key === 'Home') {
+                const lineStart = this.userCode.slice(0, this.cursorPos).lastIndexOf('\n') + 1;
+                this.cursorPos = lineStart;
+            } else if (key === 'End') {
+                const nextNewline = this.userCode.indexOf('\n', this.cursorPos);
+                this.cursorPos = nextNewline === -1 ? this.userCode.length : nextNewline;
             } else if (key.length === 1) {
-                // Add regular character
-                this.userCode += key;
+                // Add regular character at the cursor, not just at the end
+                this.insertAtCursor(key);
+            } else {
+                // Unrecognized key (Shift, Control, CapsLock, ...) - ignore
+                // entirely so it doesn't cancel in-progress history recall
+                return;
             }
 
-            // Typing anything new ends history navigation
+            // Typing or moving the cursor ends history navigation
             this.historyIndex = null;
 
             // Update displayed code
             this.updateCodeDisplay();
         });
+    }
+
+    // Inserts text at the current cursor position and advances the cursor
+    // past it, instead of always appending to the end of the code
+    insertAtCursor(text) {
+        this.userCode = this.userCode.slice(0, this.cursorPos) + text + this.userCode.slice(this.cursorPos);
+        this.cursorPos += text.length;
     }
 
     // Step through previously run code, terminal-style. direction: -1 = older, 1 = newer
@@ -494,6 +551,7 @@ export default class BattleScene extends Phaser.Scene {
                 // Past the newest entry - restore what the player was typing
                 this.historyIndex = null;
                 this.userCode = this.draftCode;
+                this.cursorPos = this.userCode.length;
                 this.updateCodeDisplay();
                 return;
             }
@@ -501,31 +559,29 @@ export default class BattleScene extends Phaser.Scene {
         }
 
         this.userCode = this.codeHistory[this.historyIndex];
+        this.cursorPos = this.userCode.length;
         this.updateCodeDisplay();
     }
 
     updateCodeDisplay() {
-        // Display the code with cursor
-        const displayText = this.userCode + (this.cursorVisible ? '|' : '');
-        this.codeText.setText(displayText);
+        // The code text itself never includes the cursor character - the
+        // separate blinking this.cursor object is positioned over it below,
+        // so it can sit anywhere in the text, not just at the end
+        this.codeText.setText(this.userCode);
 
-        // Update cursor position based on screen size
-        const { width, height } = this.cameras.main;
-        const fontSize = Math.max(14, Math.floor(width / 100));
-        const editorWidth = width * 0.7;
-        const editorHeight = height * 0.15;  // Updated to match new editor size
-        const editorX = width / 2;
-        const editorY = height * 0.88;  // Updated to match new editor position
+        const charWidth = this.editorFontSize * 0.6; // Approximate character width
+        const lineHeight = this.editorFontSize * 1.3; // Line height
+        const baseX = this.editorX - this.editorWidth / 2 + 20;
+        const baseY = this.editorY - this.editorHeight / 2 + 10;
 
-        const lines = this.userCode.split('\n');
-        const lastLine = lines[lines.length - 1];
-        const charWidth = fontSize * 0.6; // Approximate character width
-        const lineHeight = fontSize * 1.3; // Line height
+        // Figure out which visual line/column the cursor sits on by counting
+        // newlines up to it, so it can be placed anywhere in the text
+        const textBeforeCursor = this.userCode.slice(0, this.cursorPos);
+        const linesBeforeCursor = textBeforeCursor.split('\n');
+        const cursorRow = linesBeforeCursor.length - 1;
+        const cursorCol = linesBeforeCursor[linesBeforeCursor.length - 1].length;
 
-        const cursorX = (editorX - editorWidth / 2 + 20) + (lastLine.length * charWidth);
-        const cursorY = (editorY - editorHeight / 2 + 10) + ((lines.length - 1) * lineHeight);
-
-        this.cursor.setPosition(cursorX, cursorY);
+        this.cursor.setPosition(baseX + cursorCol * charWidth, baseY + cursorRow * lineHeight);
     }
 
     showCodeHint() {
@@ -543,12 +599,14 @@ export default class BattleScene extends Phaser.Scene {
         const badgeGap = 8;
 
         // Docked to the bottom-left corner, entirely inside the margin left
-        // of the code editor (which starts at 15% of the game width) and
-        // above the console output box. Staying narrower than that margin -
-        // rather than trying to size the panel to clear both boxes - means
-        // it can grow as tall as a hint needs without ever touching either,
-        // no matter how long the hint text is.
-        const panelWidth = Math.min(280, this.gameWidth * 0.15 - 20);
+        // of the code editor and above the console output box. Reading the
+        // editor's actual left edge (rather than a hardcoded fraction of the
+        // game width) means this can never drift out of sync if the editor
+        // is resized. Staying narrower than that margin - rather than trying
+        // to size the panel to clear both boxes - means it can grow as tall
+        // as a hint needs without ever touching either, no matter how long
+        // the hint text is.
+        const panelWidth = Math.min(280, this.editorLeftEdge - 20);
         const panelLeft = 8;
         const panelBottom = height - 16; // hugs the very bottom-left corner
         const wrapWidth = panelWidth - pad * 2 - chipPad * 2;
@@ -663,6 +721,7 @@ export default class BattleScene extends Phaser.Scene {
 
                 // Clear the editor for next turn
                 this.userCode = '';
+                this.cursorPos = 0;
                 this.updateCodeDisplay();
 
                 // Player attacks after showing message
@@ -721,12 +780,19 @@ export default class BattleScene extends Phaser.Scene {
         this.tweens.add({
             targets: this.playerSprite,
             x: this.playerSprite.x + 60,
-            duration: 180,
+            duration: 320,
             yoyo: true,
             ease: 'Power1'
         });
 
-        this.time.delayedCall(150, () => {
+        // Attack animation plays over its own 164px 'hero-attack' texture,
+        // then hands back to the idle 'hero' frame it started from
+        this.playerSprite.play(HERO_ATTACK_ANIM_KEY);
+        this.playerSprite.once('animationcomplete', () => {
+            this.playerSprite.setTexture('hero', 0);
+        });
+
+        this.time.delayedCall(270, () => {
             // Applied the moment the visual effect actually connects - not
             // before - so the HP bar/damage number never land ahead of the
             // fireball arriving or the lightning striking.
@@ -816,42 +882,21 @@ export default class BattleScene extends Phaser.Scene {
         });
 
         this.time.delayedCall(900, () => {
-            // Jagged multi-segment bolt path from the cloud down to the target
+            // Bolt sprite stretched to span from the cloud down to the target,
+            // instead of a hand-drawn jagged polyline
             const topY = cloudY + 35;
             const bottomY = y + 5;
-            const segments = 6;
-            const points = [{ x, y: topY }];
-            for (let i = 1; i < segments; i++) {
-                const t = i / segments;
-                const dir = i % 2 === 0 ? 1 : -1;
-                const amp = Phaser.Math.Between(12, 26) * (1 - t * 0.3);
-                points.push({ x: x + dir * amp, y: topY + (bottomY - topY) * t });
-            }
-            points.push({ x, y: bottomY });
-
-            const drawBolt = (g, lineWidth, color, alpha) => {
-                g.lineStyle(lineWidth, color, alpha);
-                g.beginPath();
-                g.moveTo(points[0].x, points[0].y);
-                for (let i = 1; i < points.length; i++) g.lineTo(points[i].x, points[i].y);
-                g.strokePath();
-            };
+            const boltHeight = bottomY - topY;
+            const boltScale = boltHeight / 161;
+            const midY = (topY + bottomY) / 2;
 
             // Soft glow layer behind the crisp bolt for extra punch
-            const boltGlow = this.add.graphics();
-            drawBolt(boltGlow, 18, 0xaaddff, 0.35);
+            const boltGlow = this.add.sprite(x, midY, 'fx-lightning')
+                .setScale(boltScale * 1.7)
+                .setAlpha(0.4)
+                .setTint(0xaaddff);
 
-            const bolt = this.add.graphics();
-            drawBolt(bolt, 7, 0xffffaa, 1);
-
-            // A small forked branch partway down for detail
-            const forkStart = points[2];
-            const fork = this.add.graphics();
-            fork.lineStyle(3, 0xffffcc, 0.9);
-            fork.beginPath();
-            fork.moveTo(forkStart.x, forkStart.y);
-            fork.lineTo(forkStart.x + (forkStart.x > x ? 34 : -34), forkStart.y + 26);
-            fork.strokePath();
+            const bolt = this.add.sprite(x, midY, 'fx-lightning').setScale(boltScale);
 
             this.cameras.main.flash(220, 255, 255, 220);
             onStrike();
@@ -861,10 +906,10 @@ export default class BattleScene extends Phaser.Scene {
                 if (bolt.active) { bolt.setAlpha(0.25); boltGlow.setAlpha(0.1); }
             });
             this.time.delayedCall(230, () => {
-                if (bolt.active) { bolt.setAlpha(1); boltGlow.setAlpha(0.35); }
+                if (bolt.active) { bolt.setAlpha(1); boltGlow.setAlpha(0.4); }
             });
 
-            [bolt, boltGlow, fork].forEach(g => {
+            [bolt, boltGlow].forEach(g => {
                 this.tweens.add({
                     targets: g,
                     alpha: 0,
@@ -886,15 +931,34 @@ export default class BattleScene extends Phaser.Scene {
 
     // A fireball flies from caster to target, then bursts into radiating embers
     showFireball(fromX, fromY, toX, toY, onImpact = () => {}) {
-        const fireball = this.add.circle(fromX, fromY, 14, 0xff6600, 1);
-        const glow = this.add.circle(fromX, fromY, 24, 0xff9900, 0.4);
+        const scale = 0.45;
+        const glow = this.add.sprite(fromX, fromY, 'fx-fireball')
+            .setScale(scale * 1.6)
+            .setAlpha(0.5)
+            .setTint(0xffaa00);
+        const fireball = this.add.sprite(fromX, fromY, 'fx-fireball').setScale(scale);
 
+        // Lobbed along an arc (quadratic bezier through a raised midpoint)
+        // rather than flying straight at the target
+        const arcHeight = 90;
+        const curve = new Phaser.Curves.QuadraticBezier(
+            new Phaser.Math.Vector2(fromX, fromY),
+            new Phaser.Math.Vector2((fromX + toX) / 2, Math.min(fromY, toY) - arcHeight),
+            new Phaser.Math.Vector2(toX, toY)
+        );
+
+        const progress = { t: 0 };
         this.tweens.add({
-            targets: [fireball, glow],
-            x: toX,
-            y: toY,
-            duration: 400,
-            ease: 'Cubic.In',
+            targets: progress,
+            t: 1,
+            duration: 700,
+            ease: 'Sine.easeIn',
+            onUpdate: () => {
+                const point = curve.getPoint(progress.t);
+                fireball.setPosition(point.x, point.y);
+                glow.setPosition(point.x, point.y);
+                fireball.rotation = progress.t * 0.6;
+            },
             onComplete: () => {
                 this.cameras.main.flash(120, 255, 130, 0);
                 onImpact();
@@ -935,12 +999,19 @@ export default class BattleScene extends Phaser.Scene {
         this.tweens.add({
             targets: this.enemySprite,
             x: this.enemySprite.x - 60,
-            duration: 180,
+            duration: 320,
             yoyo: true,
             ease: 'Power1'
         });
 
-        this.time.delayedCall(150, () => {
+        // Attack animation plays on the enemy's own spritesheet (frame 0 is
+        // its idle pose, frames 1-8 are the attack), then hands back to idle
+        this.enemySprite.play(enemyAttackAnimKey(this.currentEnemy.sprite));
+        this.enemySprite.once('animationcomplete', () => {
+            this.enemySprite.setFrame(0);
+        });
+
+        this.time.delayedCall(270, () => {
             // Flash red
             this.cameras.main.flash(100, 255, 0, 0);
 
@@ -968,6 +1039,7 @@ export default class BattleScene extends Phaser.Scene {
                     this.isPlayerTurn = true;
                     this.battleLog.setText('Your turn! Write more Python code!');
                     this.userCode = '';
+                    this.cursorPos = 0;
                     this.updateCodeDisplay();
                     this.showCodeHint();
                 });

@@ -25,7 +25,12 @@ export default class MainMenuScene extends Phaser.Scene {
         let buttonY = height * 0.48;
         const buttonWidth = 300;
         const buttonHeight = 56;
-        const buttonSpacing = 72;
+        // Each button's clickable area extends 20px past its edges on every
+        // side (hit-slop, for trackpad tolerance), so adjacent buttons need
+        // at least height + 2*20 = 96px of spacing or their hit zones
+        // overlap - which was causing clicks on one button to sometimes
+        // resolve to its neighbor instead
+        const buttonSpacing = 100;
 
         if (hasSaveGame) {
             createButton(this, width / 2, buttonY, buttonWidth, buttonHeight, 'Continue', {

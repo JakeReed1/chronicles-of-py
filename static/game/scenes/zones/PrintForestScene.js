@@ -1,4 +1,5 @@
 import { COLORS, TEXT, createPanel, createGlowTitle } from '../../theme.js';
+import { directionFromInput, heroWalkAnimKey, heroIdleFrame } from '../../heroAnim.js';
 
 // World Scene - First Level: The Print() Forest
 export default class PrintForestScene extends Phaser.Scene {
@@ -49,69 +50,66 @@ export default class PrintForestScene extends Phaser.Scene {
     }
     
     createFirstLevel() {
-        const grassBg = this.add.tileSprite(1280, 720, 2560, 1440, 'grass-tile');
-        grassBg.setDepth(-1); // Ensure it stays in the background
+        // Single cohesive level background (PixelLab pro) with the ruined
+        // brick buildings, garden walls, and trees painted directly into
+        // the scene, instead of compositing separate sprites on top of a
+        // plain background - avoids any alignment/lighting mismatch.
+        this.add.image(1280, 720, 'forest-background-ruins').setDisplaySize(2560, 1440).setDepth(-1);
 
-        // If your grass tile is a different size than expected, you might need to scale it:
-        // grassBg.setTileScale(2, 2); // Makes each tile 2x bigger
-        
         // Create walls/obstacles group for collision
         this.walls = this.physics.add.staticGroup();
-        
-        // Create border walls
-        // Top and bottom walls
+
+        // Border walls - invisible now that the background art itself shows
+        // a dense tree line around the edge of the play area; these still
+        // block movement, the art explains why
         for (let x = 0; x < 80; x++) {
-            this.walls.create(x * 32 + 16, 16, 'ground-tile').setTint(0x8B4513);
-            this.walls.create(x * 32 + 16, 1424, 'ground-tile').setTint(0x8B4513);
+            this.walls.create(x * 32 + 16, 16, 'ground-tile').setVisible(false);
+            this.walls.create(x * 32 + 16, 1424, 'ground-tile').setVisible(false);
         }
-        
+
         // Left and right walls
         for (let y = 0; y < 45; y++) {
-            this.walls.create(16, y * 32 + 16, 'ground-tile').setTint(0x8B4513);
-            this.walls.create(2544, y * 32 + 16, 'ground-tile').setTint(0x8B4513);
+            this.walls.create(16, y * 32 + 16, 'ground-tile').setVisible(false);
+            this.walls.create(2544, y * 32 + 16, 'ground-tile').setVisible(false);
         }
-        
-        // Create some interior walls/obstacles
-        // Create a simple maze-like structure
-        for (let i = 0; i < 15; i++) {
-            this.walls.create(400 + i * 32, 400, 'ground-tile').setTint(0x8B4513);
-            this.walls.create(400, 400 + i * 32, 'ground-tile').setTint(0x8B4513);
-        }
-        
-        for (let i = 0; i < 20; i++) {
-            this.walls.create(1200 + i * 32, 800, 'ground-tile').setTint(0x8B4513);
-            this.walls.create(1800, 600 + i * 32, 'ground-tile').setTint(0x8B4513);
-        }
-        
-        // Add more walls for complexity
-        for (let i = 0; i < 12; i++) {
-            this.walls.create(800, 200 + i * 32, 'ground-tile').setTint(0x8B4513);
-            this.walls.create(2000 + i * 32, 1000, 'ground-tile').setTint(0x8B4513);
-        }
-        
-        // Add trees as obstacles scattered around
-        this.trees = this.physics.add.staticGroup();
-        const treePositions = [
-            [200, 200], [400, 150], [600, 300], [800, 200], [1000, 150],
-            [1200, 250], [1400, 350], [1600, 200], [1800, 300], [2000, 250],
-            [2200, 400], [2400, 350], [100, 600], [300, 800], [500, 900],
-            [700, 1000], [900, 850], [1100, 900], [1300, 1000], [1500, 1100],
-            [1700, 950], [1900, 1100], [2100, 1000], [2300, 1200], [150, 1200],
-            [350, 1300], [550, 1200], [750, 1100], [950, 1300], [1150, 1200],
-            [1350, 1100], [1550, 1300], [1750, 1200], [1950, 1300], [2150, 1100],
-            [2350, 1300], [250, 500], [450, 600], [650, 500], [850, 600]
-        ];
-        
-        const treeTextures = ['k-tree-round', 'k-tree-round', 'k-tree-round2', 'k-tree-apple'];
-        treePositions.forEach(pos => {
-            // Shadow drawn before the tree so it renders underneath, not over it
-            this.add.ellipse(pos[0], pos[1] + 30, 65, 33, 0x000000, 0.3);
 
-            const tree = this.trees.create(pos[0], pos[1], Phaser.Math.RND.pick(treeTextures));
-            tree.setScale(5.0);
-            tree.refreshBody();
-        });
-        
+        // Interior obstacles - invisible collision boxes matching the ruin
+        // buildings, garden walls, and free-standing trees actually painted
+        // into the background (mapped by inspecting the source art), rather
+        // than a separate grid-based maze. A single rectangle per solid
+        // shape; each is an invisible physics body sized/positioned to the
+        // painted silhouette.
+        const placeSolid = (x, y, width, height) => {
+            const block = this.add.rectangle(x, y, width, height, 0x000000, 0);
+            this.physics.add.existing(block, true);
+            this.walls.add(block);
+        };
+
+        // Ruined cottage (main building + its attached low wall stub)
+        placeSolid(600, 438, 520, 415);
+        placeSolid(975, 355, 250, 150);
+
+        // Tall broken wall remnant (upper-middle ruin)
+        placeSolid(1630, 395, 220, 350);
+
+        // L-shaped garden wall (upper-right enclosure)
+        placeSolid(2080, 335, 440, 90);
+        placeSolid(2265, 688, 70, 625);
+
+        // Separate lower wall segment (right side)
+        placeSolid(2000, 883, 480, 125);
+
+        // Two wavy low garden walls (lower-left) - each approximated as a
+        // short chain of small blocks following the painted curve
+        const wavyWall1 = [[819, 713], [968, 769], [1116, 844], [1284, 956]];
+        const wavyWall2 = [[428, 975], [670, 1125], [930, 1163], [1154, 1125]];
+        wavyWall1.concat(wavyWall2).forEach(([x, y]) => placeSolid(x, y, 70, 50));
+
+        // Free-standing trees not part of the dense tree-lined border
+        const interiorTrees = [[1380, 360], [1390, 790], [2280, 840], [1670, 1240]];
+        interiorTrees.forEach(([x, y]) => placeSolid(x, y, 70, 70));
+
+
         // Add level title
         createGlowTitle(this, 1280, 100, 'Level 1: The Print() Forest', {
             fontSize: 48,
@@ -130,15 +128,6 @@ export default class PrintForestScene extends Phaser.Scene {
             strokeThickness: 4  // Increased from 2 to 4
         }).setOrigin(0.5);
         
-        // Add some decorative elements
-        // Flowers and bushes - scattered across the larger world
-        const decorTextures = ['k-flower-blue', 'k-flower-orange', 'k-bush-round'];
-        for (let i = 0; i < 40; i++) {
-            const x = Phaser.Math.Between(100, 2400);
-            const y = Phaser.Math.Between(100, 1300);
-            this.add.image(x, y, Phaser.Math.RND.pick(decorTextures)).setScale(1.5);
-        }
-
         // Exit portal to the next zone - sealed until the boss's key is collected
         const hasKey = window.gameState.hasKey('boss1_key');
 
@@ -235,18 +224,20 @@ export default class PrintForestScene extends Phaser.Scene {
         // Get saved player position or use default
         const position = window.gameState.getPlayerPosition();
         
-        // Create player sprite for top-down view
-        this.player = this.physics.add.sprite(position.x, position.y, 'hero');
+        // Create player sprite for top-down view - PixelLab 8-direction hero,
+        // sized smaller than the old placeholder to read better on the map
+        this.player = this.physics.add.sprite(position.x, position.y, 'hero', heroIdleFrame('south'));
         this.player.setCollideWorldBounds(true);
-        this.player.setScale(0.1);  // Increased from 1.2 to 2.0
-        
+        this.player.setScale(0.64);
+        this.player.facing = 'south';
+
         // Set up physics properties for top-down
         this.player.setBounce(0);
         this.player.setDrag(300); // Add drag for smooth movement
-        this.player.body.setSize(20, 20); // Circular hitbox for top-down
-        
+        this.player.body.setSize(22, 22); // Circular hitbox for top-down
+
         // Add player shadow for depth
-        this.playerShadow = this.add.ellipse(150, 520, 40, 20, 0x000000, 0.3);  // Increased shadow size
+        this.playerShadow = this.add.ellipse(150, 520, 40, 18, 0x000000, 0.3);
         
         // Add player name
         this.playerNameText = this.add.text(0, -40, 'Python Hero', {
@@ -269,10 +260,10 @@ export default class PrintForestScene extends Phaser.Scene {
         
         // Create slimes positioned for top-down view
         const slimeData = [
-            { x: 500, y: 700, name: 'Print Slime', difficulty: 'easy', id: 'slime1', stats: { maxHp: 30, damage: 5, xp: 10 } },
-            { x: 1000, y: 500, name: 'Variable Slime', difficulty: 'easy', id: 'slime2', stats: { maxHp: 40, damage: 8, xp: 15 } },
-            { x: 1600, y: 900, name: 'Loop Slime', difficulty: 'easy', id: 'slime3', stats: { maxHp: 45, damage: 9, xp: 18 } },
-            { x: 2200, y: 1200, name: 'Boss: Syntax Error', difficulty: 'medium', id: 'boss1', stats: { maxHp: 60, damage: 12, xp: 30 } }
+            { x: 500, y: 700, name: 'Print Slime', difficulty: 'easy', id: 'slime1', texture: 'enemy-slime', stats: { maxHp: 30, damage: 5, xp: 10 } },
+            { x: 1000, y: 500, name: 'Variable Slime', difficulty: 'easy', id: 'slime2', texture: 'enemy-slime', stats: { maxHp: 40, damage: 8, xp: 15 } },
+            { x: 1600, y: 900, name: 'Loop Slime', difficulty: 'easy', id: 'slime3', texture: 'enemy-slime', stats: { maxHp: 45, damage: 9, xp: 18 } },
+            { x: 2200, y: 1200, name: 'Boss: Syntax Error', difficulty: 'medium', id: 'boss1', texture: 'enemy-boss-glitch', stats: { maxHp: 60, damage: 12, xp: 30 } }
         ];
         
         slimeData.forEach(data => {
@@ -284,8 +275,10 @@ export default class PrintForestScene extends Phaser.Scene {
             // Shadow drawn before the sprite so it renders underneath, not over it
             const shadow = this.add.ellipse(data.x, data.y + 15, 45, 23, 0x000000, 0.3);  // Increased shadow size
 
-            const enemy = this.enemies.create(data.x, data.y, 'slime');
-            enemy.setScale(2.0);  // Increased from 1.2 to 2.0
+            const enemy = this.enemies.create(data.x, data.y, data.texture, 0);
+            const targetWidth = data.id === 'boss1' ? 130 : 74;
+            const textureWidth = this.textures.get(data.texture).get(0).width;
+            enemy.setScale(targetWidth / textureWidth);
             enemy.name = data.name;
             enemy.difficulty = data.difficulty;
             enemy.id = data.id;
@@ -386,13 +379,7 @@ export default class PrintForestScene extends Phaser.Scene {
         
         // Enemies collide with walls
         this.physics.add.collider(this.enemies, this.walls);
-        
-        // Player collides with trees
-        this.physics.add.collider(this.player, this.trees);
-        
-        // Enemies collide with trees
-        this.physics.add.collider(this.enemies, this.trees);
-        
+
         // Enemies collide with each other
         this.physics.add.collider(this.enemies, this.enemies);
         
@@ -596,50 +583,35 @@ export default class PrintForestScene extends Phaser.Scene {
         let velocityX = 0;
         let velocityY = 0;
         
-        // Horizontal movement
-        if (this.cursors.left.isDown || this.wasd.A.isDown) {
-            velocityX = -speed;
-            this.player.setFlipX(true); // Face left
-        } else if (this.cursors.right.isDown || this.wasd.D.isDown) {
-            velocityX = speed;
-            this.player.setFlipX(false); // Face right
-        }
-        
-        // Vertical movement
-        if (this.cursors.up.isDown || this.wasd.W.isDown) {
-            velocityY = -speed;
-        } else if (this.cursors.down.isDown || this.wasd.S.isDown) {
-            velocityY = speed;
-        }
-        
+        const left = this.cursors.left.isDown || this.wasd.A.isDown;
+        const right = this.cursors.right.isDown || this.wasd.D.isDown;
+        const up = this.cursors.up.isDown || this.wasd.W.isDown;
+        const down = this.cursors.down.isDown || this.wasd.S.isDown;
+
+        if (left) velocityX = -speed;
+        else if (right) velocityX = speed;
+
+        if (up) velocityY = -speed;
+        else if (down) velocityY = speed;
+
         // Normalize diagonal movement
         if (velocityX !== 0 && velocityY !== 0) {
             velocityX *= 0.707; // 1/sqrt(2)
             velocityY *= 0.707;
         }
-        
+
         // Apply velocity
         this.player.setVelocity(velocityX, velocityY);
-        
-        // Add walking animation effect (subtle scale bounce)
-        if (velocityX !== 0 || velocityY !== 0) {
-            if (!this.walkingTween || !this.walkingTween.isPlaying()) {
-                this.walkingTween = this.tweens.add({
-                    targets: this.player,
-                    scaleX: this.player.flipX ? -0.15 : 0.15,
-                    scaleY: 0.15,
-                    duration: 200,
-                    yoyo: true,
-                    repeat: -1,
-                    ease: 'Sine.easeInOut'
-                });
-            }
+
+        // Play the matching directional walk animation, or hold the idle
+        // pose facing whichever way the hero last moved
+        const dir = directionFromInput(up, down, left, right);
+        if (dir) {
+            this.player.facing = dir;
+            this.player.anims.play(heroWalkAnimKey(dir), true);
         } else {
-            // Stop walking animation
-            if (this.walkingTween) {
-                this.walkingTween.stop();
-                this.player.setScale(this.player.flipX ? -0.15 : 0.15, 0.15);
-            }
+            this.player.anims.stop();
+            this.player.setFrame(heroIdleFrame(this.player.facing));
         }
         
         // Update player name and shadow positions

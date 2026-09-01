@@ -1,4 +1,5 @@
 import { COLORS, TEXT, createPanel, createGlowTitle } from '../../theme.js';
+import { directionFromInput, heroWalkAnimKey, heroIdleFrame } from '../../heroAnim.js';
 
 // World Scene - Second Level: The Loop Forest
 export default class LoopForestScene extends Phaser.Scene {
@@ -49,47 +50,50 @@ export default class LoopForestScene extends Phaser.Scene {
     }
 
     createLevel() {
-        const grassBg = this.add.tileSprite(1280, 720, 2560, 1440, 'grass-tile');
-        grassBg.setTint(0x88CCFF); // Cooler tone to set the zone apart from Print Forest
-        grassBg.setDepth(-1);
+        // Single cohesive level background (PixelLab pro) - a cool moonlit
+        // clearing with tree rings and a standing-stone circle painted
+        // directly into the scene (echoing the "loop" theme), instead of
+        // tinting Print Forest's art and compositing separate tree sprites.
+        this.add.image(1280, 720, 'loop-forest-background').setDisplaySize(2560, 1440).setDepth(-1);
 
         // Create walls/obstacles group for collision
         this.walls = this.physics.add.staticGroup();
 
-        // Border walls
+        // Border walls - invisible now that the background art itself shows
+        // a dense tree line around the edge of the play area
         for (let x = 0; x < 80; x++) {
-            this.walls.create(x * 32 + 16, 16, 'ground-tile').setTint(0x4B0082);
-            this.walls.create(x * 32 + 16, 1424, 'ground-tile').setTint(0x4B0082);
+            this.walls.create(x * 32 + 16, 16, 'ground-tile').setVisible(false);
+            this.walls.create(x * 32 + 16, 1424, 'ground-tile').setVisible(false);
         }
         for (let y = 0; y < 45; y++) {
-            this.walls.create(16, y * 32 + 16, 'ground-tile').setTint(0x4B0082);
-            this.walls.create(2544, y * 32 + 16, 'ground-tile').setTint(0x4B0082);
+            this.walls.create(16, y * 32 + 16, 'ground-tile').setVisible(false);
+            this.walls.create(2544, y * 32 + 16, 'ground-tile').setVisible(false);
         }
 
-        // Interior obstacles arranged as concentric rings, echoing "looping" back on itself
-        this.trees = this.physics.add.staticGroup();
-        const center = { x: 1280, y: 720 };
-        const rings = [
-            { radius: 300, count: 12 },
-            { radius: 500, count: 18 }
-        ];
+        // Invisible collision boxes matching the tree rings and standing
+        // stones actually painted into the background (mapped by
+        // inspecting the source art), instead of code-generated rings of
+        // composited tree sprites.
+        const placeSolid = (x, y, width, height) => {
+            const block = this.add.rectangle(x, y, width, height, 0x000000, 0);
+            this.physics.add.existing(block, true);
+            this.walls.add(block);
+        };
 
-        const loopTreeTextures = ['k-tree-pine', 'k-tree-pine2'];
-        rings.forEach(ring => {
-            for (let i = 0; i < ring.count; i++) {
-                const angle = (i / ring.count) * Math.PI * 2;
-                const x = center.x + Math.cos(angle) * ring.radius;
-                const y = center.y + Math.sin(angle) * ring.radius;
+        // Outer tree ring
+        [[1451, 581], [1276, 158], [856, 56], [435, 158], [223, 713], [435, 1005], [856, 1181], [1276, 1005]]
+            .forEach(([x, y]) => placeSolid(x, y, 80, 80));
 
-                // Shadow drawn before the tree so it renders underneath, not over it
-                this.add.ellipse(x, y + 28, 60, 30, 0x000000, 0.3);
+        // Inner tree ring (around the small central clearing)
+        [[1116, 581], [856, 319], [550, 650], [856, 844]]
+            .forEach(([x, y]) => placeSolid(x, y, 80, 80));
 
-                const tree = this.trees.create(x, y, Phaser.Math.RND.pick(loopTreeTextures));
-                tree.setTint(0x3355AA);
-                tree.setScale(4.5);
-                tree.refreshBody();
-            }
-        });
+        // Standalone tree near the bottom loop
+        placeSolid(1265, 1219, 90, 90);
+
+        // The two standing-stone pillars (right-side landmark)
+        placeSolid(1693, 544, 90, 300);
+        placeSolid(2103, 544, 90, 300);
 
         // Level title
         createGlowTitle(this, 1280, 100, 'Level 2: The Loop Forest', {
@@ -108,15 +112,6 @@ export default class LoopForestScene extends Phaser.Scene {
             stroke: '#000000',
             strokeThickness: 4
         }).setOrigin(0.5);
-
-        // Decorative ground cover, tinted to match the zone's cooler palette
-        for (let i = 0; i < 40; i++) {
-            const x = Phaser.Math.Between(100, 2400);
-            const y = Phaser.Math.Between(100, 1300);
-            const decor = this.add.image(x, y, Phaser.Math.RND.pick(['k-flower-blue', 'k-bush-round']));
-            decor.setScale(1.5);
-            decor.setTint(Phaser.Math.RND.pick([0x00FFFF, 0x8888FF, 0xAA66FF]));
-        }
 
         // Return portal to Print Forest
         this.printPortal = this.physics.add.staticSprite(80, 720, 'ground-tile');
@@ -236,15 +231,16 @@ export default class LoopForestScene extends Phaser.Scene {
     createPlayer() {
         const position = window.gameState.getPlayerPosition();
 
-        this.player = this.physics.add.sprite(position.x, position.y, 'hero');
+        this.player = this.physics.add.sprite(position.x, position.y, 'hero', heroIdleFrame('south'));
         this.player.setCollideWorldBounds(true);
-        this.player.setScale(0.1);
+        this.player.setScale(0.64);
+        this.player.facing = 'south';
 
         this.player.setBounce(0);
         this.player.setDrag(300);
-        this.player.body.setSize(20, 20);
+        this.player.body.setSize(22, 22);
 
-        this.playerShadow = this.add.ellipse(position.x, position.y + 20, 40, 20, 0x000000, 0.3);
+        this.playerShadow = this.add.ellipse(position.x, position.y + 20, 40, 18, 0x000000, 0.3);
 
         this.playerNameText = this.add.text(0, -40, 'Python Hero', {
             fontSize: '18px',
@@ -263,10 +259,10 @@ export default class LoopForestScene extends Phaser.Scene {
         this.enemies = this.physics.add.group();
 
         const slimeData = [
-            { x: 600, y: 500, name: 'For Loop Treant', difficulty: 'easy', id: 'loop1', stats: { maxHp: 45, damage: 9, xp: 18 } },
-            { x: 1100, y: 950, name: 'While Loop Treant', difficulty: 'easy', id: 'loop2', stats: { maxHp: 50, damage: 10, xp: 20 } },
-            { x: 1900, y: 500, name: 'Range Sapling', difficulty: 'easy', id: 'loop3', stats: { maxHp: 40, damage: 8, xp: 16 } },
-            { x: 2200, y: 1150, name: 'Boss: Infinite Loop Tree', difficulty: 'medium', id: 'boss2', stats: { maxHp: 80, damage: 15, xp: 40 } }
+            { x: 600, y: 500, name: 'For Loop Treant', difficulty: 'easy', id: 'loop1', texture: 'enemy-treant', stats: { maxHp: 45, damage: 9, xp: 18 } },
+            { x: 1100, y: 950, name: 'While Loop Treant', difficulty: 'easy', id: 'loop2', texture: 'enemy-treant', stats: { maxHp: 50, damage: 10, xp: 20 } },
+            { x: 1900, y: 500, name: 'Range Sapling', difficulty: 'easy', id: 'loop3', texture: 'enemy-treant', stats: { maxHp: 40, damage: 8, xp: 16 } },
+            { x: 2200, y: 1150, name: 'Boss: Infinite Loop Tree', difficulty: 'medium', id: 'boss2', texture: 'enemy-boss-treant', stats: { maxHp: 80, damage: 15, xp: 40 } }
         ];
 
         slimeData.forEach(data => {
@@ -277,8 +273,10 @@ export default class LoopForestScene extends Phaser.Scene {
             // Shadow drawn before the sprite so it renders underneath, not over the face
             const shadow = this.add.ellipse(data.x, data.y + 22, 45, 16, 0x000000, 0.3);
 
-            const enemy = this.enemies.create(data.x, data.y, 'tree-enemy');
-            enemy.setScale(2.0);
+            const enemy = this.enemies.create(data.x, data.y, data.texture, 0);
+            const targetWidth = data.id === 'boss2' ? 130 : 74;
+            const textureWidth = this.textures.get(data.texture).get(0).width;
+            enemy.setScale(targetWidth / textureWidth);
             enemy.name = data.name;
             enemy.difficulty = data.difficulty;
             enemy.id = data.id;
@@ -374,8 +372,6 @@ export default class LoopForestScene extends Phaser.Scene {
     setupCollisions() {
         this.physics.add.collider(this.player, this.walls);
         this.physics.add.collider(this.enemies, this.walls);
-        this.physics.add.collider(this.player, this.trees);
-        this.physics.add.collider(this.enemies, this.trees);
         this.physics.add.collider(this.enemies, this.enemies);
 
         this.physics.add.overlap(this.player, this.enemies, this.startBattle, null, this);
@@ -569,19 +565,16 @@ export default class LoopForestScene extends Phaser.Scene {
         let velocityX = 0;
         let velocityY = 0;
 
-        if (this.cursors.left.isDown || this.wasd.A.isDown) {
-            velocityX = -speed;
-            this.player.setFlipX(true);
-        } else if (this.cursors.right.isDown || this.wasd.D.isDown) {
-            velocityX = speed;
-            this.player.setFlipX(false);
-        }
+        const left = this.cursors.left.isDown || this.wasd.A.isDown;
+        const right = this.cursors.right.isDown || this.wasd.D.isDown;
+        const up = this.cursors.up.isDown || this.wasd.W.isDown;
+        const down = this.cursors.down.isDown || this.wasd.S.isDown;
 
-        if (this.cursors.up.isDown || this.wasd.W.isDown) {
-            velocityY = -speed;
-        } else if (this.cursors.down.isDown || this.wasd.S.isDown) {
-            velocityY = speed;
-        }
+        if (left) velocityX = -speed;
+        else if (right) velocityX = speed;
+
+        if (up) velocityY = -speed;
+        else if (down) velocityY = speed;
 
         if (velocityX !== 0 && velocityY !== 0) {
             velocityX *= 0.707;
@@ -590,21 +583,13 @@ export default class LoopForestScene extends Phaser.Scene {
 
         this.player.setVelocity(velocityX, velocityY);
 
-        if (velocityX !== 0 || velocityY !== 0) {
-            if (!this.walkingTween || !this.walkingTween.isPlaying()) {
-                this.walkingTween = this.tweens.add({
-                    targets: this.player,
-                    scaleX: this.player.flipX ? -0.15 : 0.15,
-                    scaleY: 0.15,
-                    duration: 200,
-                    yoyo: true,
-                    repeat: -1,
-                    ease: 'Sine.easeInOut'
-                });
-            }
-        } else if (this.walkingTween) {
-            this.walkingTween.stop();
-            this.player.setScale(this.player.flipX ? -0.15 : 0.15, 0.15);
+        const dir = directionFromInput(up, down, left, right);
+        if (dir) {
+            this.player.facing = dir;
+            this.player.anims.play(heroWalkAnimKey(dir), true);
+        } else {
+            this.player.anims.stop();
+            this.player.setFrame(heroIdleFrame(this.player.facing));
         }
 
         if (this.player.nameText) {

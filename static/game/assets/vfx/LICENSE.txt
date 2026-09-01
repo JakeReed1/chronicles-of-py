@@ -1,0 +1,4 @@
+fireball.png, thunder_bolt.png
+Source: FreePixel.art (https://freepixel.art) - Effects & Particles collection
+License: Free for personal and commercial use, no attribution required,
+no redistribution of the raw asset files. See https://freepixel.art/license

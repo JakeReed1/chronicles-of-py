@@ -1,0 +1,11 @@
+marketing/key_art.png credits:
+
+- Hero sprite: static/game/assets/sprites/hero.png (existing project asset)
+- Dragon: user-generated pixel art (marketing/dragon_generated.png), also
+  used in-game as static/game/assets/enemies/dragon_boss.png (Conditional
+  Caverns boss "Boss: Unhandled Exception")
+- Fire/lightning spell effects: FreePixel.art (https://freepixel.art)
+  License: free for personal/commercial use, no attribution required,
+  no redistribution of raw asset files - see https://freepixel.art/license
+- Trees: Kenney "Roguelike/RPG Pack" (CC0) - see static/game/assets/kenney/LICENSE.txt
+- Font: Press Start 2P by Cody "CodeMan38" Boisclair (SIL Open Font License)

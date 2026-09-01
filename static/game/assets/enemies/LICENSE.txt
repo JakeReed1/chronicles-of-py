@@ -1,0 +1,5 @@
+if_golem.png, elif_checker.png, else_wraith.png, dragon_boss.png
+
+User-generated pixel art (AI-assisted), created for this project.
+Replaces earlier Kenney "Monster Builder Pack" placeholder sprites for the
+Conditional Caverns zone to match a consistent SNES-style pixel art look.

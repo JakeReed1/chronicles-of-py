@@ -1,4 +1,5 @@
 import { TEXT, createPanel, createGlowTitle } from '../../theme.js';
+import { directionFromInput, heroWalkAnimKey, heroIdleFrame } from '../../heroAnim.js';
 
 // World Scene - Third Level: The Conditional Caverns
 export default class ConditionalCavernsScene extends Phaser.Scene {
@@ -45,41 +46,47 @@ export default class ConditionalCavernsScene extends Phaser.Scene {
     }
 
     createLevel() {
-        const floor = this.add.tileSprite(1280, 720, 2560, 1440, 'k-ground-gray');
-        floor.setTint(0x8888aa);
-        floor.setDepth(-1);
+        // Single cohesive level background (PixelLab pro) - the watchtower
+        // ruin is now painted directly into the scene (rather than a
+        // separately composited sprite), so collision below is placed to
+        // match what's actually drawn, the same technique used for Print
+        // Forest's background.
+        this.add.image(1280, 720, 'cave-background-v2').setDisplaySize(2560, 1440).setDepth(-1);
 
         // Create walls/obstacles group for collision
         this.walls = this.physics.add.staticGroup();
 
-        // Border walls
+        // Border walls - invisible now that the background art itself shows
+        // a rock-wall border around the edges of the cavern
         for (let x = 0; x < 80; x++) {
-            this.walls.create(x * 32 + 16, 16, 'ground-tile').setTint(0x2f2f3d);
-            this.walls.create(x * 32 + 16, 1424, 'ground-tile').setTint(0x2f2f3d);
+            this.walls.create(x * 32 + 16, 16, 'ground-tile').setVisible(false);
+            this.walls.create(x * 32 + 16, 1424, 'ground-tile').setVisible(false);
         }
         for (let y = 0; y < 45; y++) {
-            this.walls.create(16, y * 32 + 16, 'ground-tile').setTint(0x2f2f3d);
-            this.walls.create(2544, y * 32 + 16, 'ground-tile').setTint(0x2f2f3d);
+            this.walls.create(16, y * 32 + 16, 'ground-tile').setVisible(false);
+            this.walls.create(2544, y * 32 + 16, 'ground-tile').setVisible(false);
         }
 
-        // Interior obstacles - scattered boulders forming a branching cave path
-        this.trees = this.physics.add.staticGroup();
-        const boulderPositions = [
-            [500, 300], [700, 350], [900, 300], [1100, 400], [1300, 300],
-            [1500, 400], [1700, 300], [1900, 400], [2100, 300], [2300, 400],
-            [400, 700], [600, 750], [1900, 750], [2100, 700],
-            [500, 1100], [700, 1050], [900, 1150], [1400, 1100], [1600, 1050],
-            [1800, 1150], [2000, 1100], [2200, 1050],
-            [1000, 600], [1200, 650], [1400, 600], [1600, 650], [1800, 600]
-        ];
+        // Invisible collision boxes matching what's actually painted into
+        // the background (mapped by inspecting the source art), instead of
+        // composited sprites placed at guessed positions.
+        const placeSolid = (x, y, width, height) => {
+            const block = this.add.rectangle(x, y, width, height, 0x000000, 0);
+            this.physics.add.existing(block, true);
+            this.walls.add(block);
+        };
 
-        boulderPositions.forEach(pos => {
-            this.add.ellipse(pos[0], pos[1] + 20, 55, 26, 0x000000, 0.35);
-            const boulder = this.trees.create(pos[0], pos[1], 'k-ground-gray');
-            boulder.setTint(0x55555f);
-            boulder.setScale(4.5);
-            boulder.refreshBody();
-        });
+        // Watchtower ruin (upper-middle) - a single solid footprint, clear
+        // of the dark pit (roughly world x:1544-2140, y:713-1219)
+        placeSolid(772, 338, 300, 400);
+
+        // Scattered boulders sitting on open floor, avoiding the pit and
+        // the ambiguous area right around its rim
+        const boulderWorldPositions = [
+            [149, 450], [930, 413], [1265, 405], [1302, 743],
+            [279, 1013], [1005, 1181], [2289, 769], [2289, 1219], [354, 1294]
+        ];
+        boulderWorldPositions.forEach(([x, y]) => placeSolid(x, y, 70, 70));
 
         // Level title
         createGlowTitle(this, 1280, 100, 'Level 3: The Conditional Caverns', {
@@ -141,15 +148,16 @@ export default class ConditionalCavernsScene extends Phaser.Scene {
     createPlayer() {
         const position = window.gameState.getPlayerPosition();
 
-        this.player = this.physics.add.sprite(position.x, position.y, 'hero');
+        this.player = this.physics.add.sprite(position.x, position.y, 'hero', heroIdleFrame('south'));
         this.player.setCollideWorldBounds(true);
-        this.player.setScale(0.1);
+        this.player.setScale(0.64);
+        this.player.facing = 'south';
 
         this.player.setBounce(0);
         this.player.setDrag(300);
-        this.player.body.setSize(20, 20);
+        this.player.body.setSize(22, 22);
 
-        this.playerShadow = this.add.ellipse(position.x, position.y + 20, 40, 20, 0x000000, 0.3);
+        this.playerShadow = this.add.ellipse(position.x, position.y + 20, 40, 18, 0x000000, 0.3);
 
         this.playerNameText = this.add.text(0, -40, 'Python Hero', {
             fontSize: '18px',
@@ -168,10 +176,10 @@ export default class ConditionalCavernsScene extends Phaser.Scene {
         this.enemies = this.physics.add.group();
 
         const enemyData = [
-            { x: 700, y: 500, name: 'If Golem', difficulty: 'easy', id: 'cond1', texture: 'k-enemy-if-golem', tint: null, stats: { maxHp: 55, damage: 11, xp: 22 } },
-            { x: 1300, y: 950, name: 'Elif Checker', difficulty: 'easy', id: 'cond2', texture: 'k-enemy-if-golem', tint: 0x66ff88, stats: { maxHp: 60, damage: 12, xp: 24 } },
-            { x: 1900, y: 500, name: 'Else Wraith', difficulty: 'easy', id: 'cond3', texture: 'k-enemy-else-wraith', tint: null, stats: { maxHp: 50, damage: 10, xp: 20 } },
-            { x: 2200, y: 1150, name: 'Boss: Unhandled Exception', difficulty: 'medium', id: 'boss3', texture: 'k-enemy-boss-exception', tint: null, stats: { maxHp: 100, damage: 18, xp: 50 } }
+            { x: 750, y: 700, name: 'If Golem', difficulty: 'easy', id: 'cond1', texture: 'enemy-if-golem', tint: null, stats: { maxHp: 55, damage: 11, xp: 22 } },
+            { x: 1300, y: 950, name: 'Elif Checker', difficulty: 'easy', id: 'cond2', texture: 'enemy-elif-checker', tint: null, stats: { maxHp: 60, damage: 12, xp: 24 } },
+            { x: 1900, y: 500, name: 'Else Wraith', difficulty: 'easy', id: 'cond3', texture: 'enemy-else-wraith', tint: null, stats: { maxHp: 50, damage: 10, xp: 20 } },
+            { x: 2200, y: 1150, name: 'Boss: Unhandled Exception', difficulty: 'medium', id: 'boss3', texture: 'enemy-boss-dragon', tint: null, stats: { maxHp: 100, damage: 18, xp: 50 } }
         ];
 
         enemyData.forEach(data => {
@@ -182,14 +190,21 @@ export default class ConditionalCavernsScene extends Phaser.Scene {
             // Shadow drawn before the sprite so it renders underneath, not over the face
             const shadow = this.add.ellipse(data.x, data.y + 26, 45, 16, 0x000000, 0.3);
 
-            const enemy = this.enemies.create(data.x, data.y, data.texture);
-            enemy.setScale(0.45);
+            const enemy = this.enemies.create(data.x, data.y, data.texture, 0);
+            // Normalize on-screen size across textures of different native
+            // resolutions, giving the boss a bit more presence than regular
+            // enemies. Textures are 9-frame spritesheets (idle + attack), so
+            // the per-frame width comes from the frame data, not the sheet.
+            const targetWidth = data.id === 'boss3' ? 130 : 74;
+            const textureWidth = this.textures.get(data.texture).get(0).width;
+            const enemyScale = targetWidth / textureWidth;
+            enemy.setScale(enemyScale);
             if (data.tint) enemy.setTint(data.tint);
             enemy.name = data.name;
             enemy.difficulty = data.difficulty;
             enemy.id = data.id;
             enemy.stats = data.stats;
-            enemy.body.setSize(90, 90);
+            enemy.body.setSize(textureWidth * 0.545, textureWidth * 0.545);
             enemy.shadow = shadow;
 
             const nameText = this.add.text(data.x, data.y - 45, data.name, {
@@ -280,8 +295,6 @@ export default class ConditionalCavernsScene extends Phaser.Scene {
     setupCollisions() {
         this.physics.add.collider(this.player, this.walls);
         this.physics.add.collider(this.enemies, this.walls);
-        this.physics.add.collider(this.player, this.trees);
-        this.physics.add.collider(this.enemies, this.trees);
         this.physics.add.collider(this.enemies, this.enemies);
 
         this.physics.add.overlap(this.player, this.enemies, this.startBattle, null, this);
@@ -412,19 +425,16 @@ export default class ConditionalCavernsScene extends Phaser.Scene {
         let velocityX = 0;
         let velocityY = 0;
 
-        if (this.cursors.left.isDown || this.wasd.A.isDown) {
-            velocityX = -speed;
-            this.player.setFlipX(true);
-        } else if (this.cursors.right.isDown || this.wasd.D.isDown) {
-            velocityX = speed;
-            this.player.setFlipX(false);
-        }
+        const left = this.cursors.left.isDown || this.wasd.A.isDown;
+        const right = this.cursors.right.isDown || this.wasd.D.isDown;
+        const up = this.cursors.up.isDown || this.wasd.W.isDown;
+        const down = this.cursors.down.isDown || this.wasd.S.isDown;
 
-        if (this.cursors.up.isDown || this.wasd.W.isDown) {
-            velocityY = -speed;
-        } else if (this.cursors.down.isDown || this.wasd.S.isDown) {
-            velocityY = speed;
-        }
+        if (left) velocityX = -speed;
+        else if (right) velocityX = speed;
+
+        if (up) velocityY = -speed;
+        else if (down) velocityY = speed;
 
         if (velocityX !== 0 && velocityY !== 0) {
             velocityX *= 0.707;
@@ -433,21 +443,13 @@ export default class ConditionalCavernsScene extends Phaser.Scene {
 
         this.player.setVelocity(velocityX, velocityY);
 
-        if (velocityX !== 0 || velocityY !== 0) {
-            if (!this.walkingTween || !this.walkingTween.isPlaying()) {
-                this.walkingTween = this.tweens.add({
-                    targets: this.player,
-                    scaleX: this.player.flipX ? -0.15 : 0.15,
-                    scaleY: 0.15,
-                    duration: 200,
-                    yoyo: true,
-                    repeat: -1,
-                    ease: 'Sine.easeInOut'
-                });
-            }
-        } else if (this.walkingTween) {
-            this.walkingTween.stop();
-            this.player.setScale(this.player.flipX ? -0.15 : 0.15, 0.15);
+        const dir = directionFromInput(up, down, left, right);
+        if (dir) {
+            this.player.facing = dir;
+            this.player.anims.play(heroWalkAnimKey(dir), true);
+        } else {
+            this.player.anims.stop();
+            this.player.setFrame(heroIdleFrame(this.player.facing));
         }
 
         if (this.player.nameText) {
