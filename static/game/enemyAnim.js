@@ -3,7 +3,7 @@
 // built from a PixelLab animate_image call on that enemy's base art.
 export const ENEMY_TEXTURE_KEYS = [
     'enemy-if-golem', 'enemy-elif-checker', 'enemy-else-wraith', 'enemy-boss-dragon',
-    'enemy-slime', 'enemy-boss-glitch', 'enemy-treant', 'enemy-boss-treant'
+    'enemy-slime', 'enemy-boss-slime-king', 'enemy-treant', 'enemy-boss-treant'
 ];
 
 export function enemyAttackAnimKey(textureKey) {

@@ -263,7 +263,7 @@ export default class PrintForestScene extends Phaser.Scene {
             { x: 500, y: 700, name: 'Print Slime', difficulty: 'easy', id: 'slime1', texture: 'enemy-slime', stats: { maxHp: 30, damage: 5, xp: 10 } },
             { x: 1000, y: 500, name: 'Variable Slime', difficulty: 'easy', id: 'slime2', texture: 'enemy-slime', stats: { maxHp: 40, damage: 8, xp: 15 } },
             { x: 1600, y: 900, name: 'Loop Slime', difficulty: 'easy', id: 'slime3', texture: 'enemy-slime', stats: { maxHp: 45, damage: 9, xp: 18 } },
-            { x: 2200, y: 1200, name: 'Boss: Syntax Error', difficulty: 'medium', id: 'boss1', texture: 'enemy-boss-glitch', stats: { maxHp: 60, damage: 12, xp: 30 } }
+            { x: 2200, y: 1200, name: 'Boss: Syntax Error', difficulty: 'medium', id: 'boss1', texture: 'enemy-boss-slime-king', stats: { maxHp: 60, damage: 12, xp: 30 } }
         ];
         
         slimeData.forEach(data => {
@@ -286,17 +286,6 @@ export default class PrintForestScene extends Phaser.Scene {
             enemy.body.setSize(24, 24); // Circular hitbox for top-down
             enemy.shadow = shadow;
             
-            // Add enemy name
-            const nameText = this.add.text(data.x, data.y - 35, data.name, {
-                fontSize: '16px',  // Increased from 10px to 16px
-                fontFamily: 'monospace',
-                color: data.difficulty === 'medium' ? '#ff0000' : '#ffff00',
-                stroke: '#000000',
-                strokeThickness: 3  // Increased from 2 to 3
-            }).setOrigin(0.5);
-            
-            enemy.nameText = nameText;
-            
             // Different patrol patterns for variety
             if (data.id === 'slime1') {
                 // Horizontal patrol
@@ -308,8 +297,6 @@ export default class PrintForestScene extends Phaser.Scene {
                     repeat: -1,
                     ease: 'Sine.easeInOut',
                     onUpdate: () => {
-                        nameText.x = enemy.x;
-                        nameText.y = enemy.y - 25;
                         shadow.x = enemy.x;
                         shadow.y = enemy.y + 10;
                     }
@@ -324,8 +311,6 @@ export default class PrintForestScene extends Phaser.Scene {
                     repeat: -1,
                     ease: 'Sine.easeInOut',
                     onUpdate: () => {
-                        nameText.x = enemy.x;
-                        nameText.y = enemy.y - 25;
                         shadow.x = enemy.x;
                         shadow.y = enemy.y + 10;
                     }
@@ -336,7 +321,7 @@ export default class PrintForestScene extends Phaser.Scene {
                 const centerX = enemy.x;
                 const centerY = enemy.y;
                 const radius = 60;
-                
+
                 this.time.addEvent({
                     delay: 50,
                     loop: true,
@@ -344,8 +329,6 @@ export default class PrintForestScene extends Phaser.Scene {
                         angle += 0.05;
                         enemy.x = centerX + Math.cos(angle) * radius;
                         enemy.y = centerY + Math.sin(angle) * radius;
-                        nameText.x = enemy.x;
-                        nameText.y = enemy.y - 25;
                         shadow.x = enemy.x;
                         shadow.y = enemy.y + 10;
                     }
@@ -355,7 +338,7 @@ export default class PrintForestScene extends Phaser.Scene {
                 let t = 0;
                 const centerX = enemy.x;
                 const centerY = enemy.y;
-                
+
                 this.time.addEvent({
                     delay: 50,
                     loop: true,
@@ -363,8 +346,6 @@ export default class PrintForestScene extends Phaser.Scene {
                         t += 0.05;
                         enemy.x = centerX + Math.sin(t) * 100;
                         enemy.y = centerY + Math.sin(t * 2) * 50;
-                        nameText.x = enemy.x;
-                        nameText.y = enemy.y - 25;
                         shadow.x = enemy.x;
                         shadow.y = enemy.y + 10;
                     }
@@ -506,8 +487,6 @@ export default class PrintForestScene extends Phaser.Scene {
         // otherwise strand the player on a faded-out screen forever.
         this.cameras.main.fade(500, 0, 0, 0);
         this.time.delayedCall(500, () => {
-            // Clean up name texts
-            enemy.nameText.destroy();
             enemy.destroy();
 
             // Switch to battle scene

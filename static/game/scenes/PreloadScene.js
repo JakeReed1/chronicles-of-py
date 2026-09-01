@@ -10,6 +10,19 @@ export default class PreloadScene extends Phaser.Scene {
 
     preload() {
         console.log('PreloadScene preload method called');
+
+        // Stamp every image/spritesheet URL with the page's version so
+        // browsers can't keep serving a stale cached copy of an asset after
+        // it's been updated on disk - Phaser loads these by plain static
+        // path with no cache-busting otherwise (unlike the top-level scene
+        // imports in game.html, which already get a ?v= from Django).
+        const assetVersion = window.ASSET_VERSION || Date.now();
+        const withVersion = (url) => url + (url.includes('?') ? '&' : '?') + 'v=' + assetVersion;
+        const originalLoadImage = this.load.image.bind(this.load);
+        const originalLoadSpritesheet = this.load.spritesheet.bind(this.load);
+        this.load.image = (key, url, ...rest) => originalLoadImage(key, withVersion(url), ...rest);
+        this.load.spritesheet = (key, url, ...rest) => originalLoadSpritesheet(key, withVersion(url), ...rest);
+
         // Show loading progress
         const width = this.cameras.main.width;
         const height = this.cameras.main.height;
@@ -108,7 +121,7 @@ export default class PreloadScene extends Phaser.Scene {
         this.load.spritesheet('enemy-boss-dragon', '/static/game/assets/enemies/dragon_boss_attack.png', { frameWidth: 96, frameHeight: 96 });
 
         this.load.spritesheet('enemy-slime', '/static/game/assets/enemies/slime_attack.png', { frameWidth: 96, frameHeight: 96 });
-        this.load.spritesheet('enemy-boss-glitch', '/static/game/assets/enemies/glitch_boss_attack.png', { frameWidth: 160, frameHeight: 160 });
+        this.load.spritesheet('enemy-boss-slime-king', '/static/game/assets/enemies/slime_king_attack.png', { frameWidth: 160, frameHeight: 160 });
         this.load.spritesheet('enemy-treant', '/static/game/assets/enemies/treant_attack.png', { frameWidth: 96, frameHeight: 96 });
         this.load.spritesheet('enemy-boss-treant', '/static/game/assets/enemies/treant_boss_attack.png', { frameWidth: 160, frameHeight: 160 });
 

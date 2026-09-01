@@ -284,16 +284,6 @@ export default class LoopForestScene extends Phaser.Scene {
             enemy.body.setSize(24, 24);
             enemy.shadow = shadow;
 
-            const nameText = this.add.text(data.x, data.y - 35, data.name, {
-                fontSize: '16px',
-                fontFamily: 'monospace',
-                color: data.difficulty === 'medium' ? '#ff0000' : '#90EE90',
-                stroke: '#000000',
-                strokeThickness: 3
-            }).setOrigin(0.5);
-
-            enemy.nameText = nameText;
-
             if (data.id === 'loop1') {
                 // Horizontal patrol
                 this.tweens.add({
@@ -304,8 +294,6 @@ export default class LoopForestScene extends Phaser.Scene {
                     repeat: -1,
                     ease: 'Sine.easeInOut',
                     onUpdate: () => {
-                        nameText.x = enemy.x;
-                        nameText.y = enemy.y - 25;
                         shadow.x = enemy.x;
                         shadow.y = enemy.y + 10;
                     }
@@ -320,8 +308,6 @@ export default class LoopForestScene extends Phaser.Scene {
                     repeat: -1,
                     ease: 'Sine.easeInOut',
                     onUpdate: () => {
-                        nameText.x = enemy.x;
-                        nameText.y = enemy.y - 25;
                         shadow.x = enemy.x;
                         shadow.y = enemy.y + 10;
                     }
@@ -340,8 +326,6 @@ export default class LoopForestScene extends Phaser.Scene {
                         angle += 0.05;
                         enemy.x = centerX + Math.cos(angle) * radius;
                         enemy.y = centerY + Math.sin(angle) * radius;
-                        nameText.x = enemy.x;
-                        nameText.y = enemy.y - 25;
                         shadow.x = enemy.x;
                         shadow.y = enemy.y + 10;
                     }
@@ -359,8 +343,6 @@ export default class LoopForestScene extends Phaser.Scene {
                         t += 0.05;
                         enemy.x = centerX + Math.sin(t) * 100;
                         enemy.y = centerY + Math.sin(t * 2) * 50;
-                        nameText.x = enemy.x;
-                        nameText.y = enemy.y - 25;
                         shadow.x = enemy.x;
                         shadow.y = enemy.y + 10;
                     }
@@ -478,7 +460,6 @@ export default class LoopForestScene extends Phaser.Scene {
         // otherwise strand the player on a faded-out screen forever.
         this.cameras.main.fade(500, 0, 0, 0);
         this.time.delayedCall(500, () => {
-            enemy.nameText.destroy();
             enemy.destroy();
 
             this.scene.stop('UIScene');

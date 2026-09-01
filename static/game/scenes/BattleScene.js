@@ -228,6 +228,13 @@ export default class BattleScene extends Phaser.Scene {
         this.enemySprite = this.add.sprite(width * 0.75, spriteY, enemyTextureKey, 0);
         this.enemySprite.setScale(enemyScale);
 
+        // The dragon boss's source art breathes fire toward the bottom-right
+        // of its own frame; mirrored here so the attack animation aims left,
+        // toward the player, instead of off into empty space
+        if (enemyTextureKey === 'enemy-boss-dragon') {
+            this.enemySprite.setFlipX(true);
+        }
+
         // Add idle animation to enemy (bouncing effect)
         this.tweens.add({
             targets: this.enemySprite,

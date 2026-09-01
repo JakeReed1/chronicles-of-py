@@ -28,8 +28,12 @@
         window.CSRF_TOKEN = '{{ csrf_token }}';
 
         // Cache-busted during development so edits show up on the next reload
-        // without needing a hard refresh.
+        // without needing a hard refresh. Exposed globally so PreloadScene
+        // can stamp the same version onto every asset URL it loads (images/
+        // spritesheets have no cache-busting otherwise, since Phaser loads
+        // them by plain static path).
         const v = '{% now "U" %}';
+        window.ASSET_VERSION = v;
 
         // Must resolve before anything reads window.gameState
         await import('{% static "game/GameState.js" %}?v=' + v);
