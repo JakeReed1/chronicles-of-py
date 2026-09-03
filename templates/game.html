@@ -23,6 +23,7 @@
     <div id="game-container"></div>
 
     <script src="https://cdn.jsdelivr.net/npm/phaser@3.70.0/dist/phaser.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/phaser3-rex-plugins@1.80.20/dist/rexuiplugin.min.js"></script>
 
     <script type="module">
         window.CSRF_TOKEN = '{{ csrf_token }}';
@@ -49,7 +50,9 @@
             { default: BattleScene },
             { default: UIScene },
             { default: SaveMenuScene },
-            { default: PauseMenuScene }
+            { default: PauseMenuScene },
+            { default: InventoryScene },
+            { default: ShopScene }
         ] = await Promise.all([
             import('{% static "game/scenes/BootScene.js" %}?v=' + v),
             import('{% static "game/scenes/PreloadScene.js" %}?v=' + v),
@@ -60,13 +63,15 @@
             import('{% static "game/scenes/BattleScene.js" %}?v=' + v),
             import('{% static "game/scenes/UIScene.js" %}?v=' + v),
             import('{% static "game/scenes/ui/SaveMenuScene.js" %}?v=' + v),
-            import('{% static "game/scenes/ui/PauseMenuScene.js" %}?v=' + v)
+            import('{% static "game/scenes/ui/PauseMenuScene.js" %}?v=' + v),
+            import('{% static "game/scenes/ui/InventoryScene.js" %}?v=' + v),
+            import('{% static "game/scenes/ui/ShopScene.js" %}?v=' + v)
         ]);
 
         config.scene = [
             BootScene, PreloadScene, MainMenuScene,
             PrintForestScene, LoopForestScene, ConditionalCavernsScene,
-            BattleScene, UIScene, SaveMenuScene, PauseMenuScene
+            BattleScene, UIScene, SaveMenuScene, PauseMenuScene, InventoryScene, ShopScene
         ];
 
         window.game = new Phaser.Game(config);
@@ -78,6 +83,47 @@
             id: {{ user.player.id|default:"null" }},
             name: '{{ user.player.name|default:user.username }}'
         });
+
+        // The real inventory lives on the backend (PlayerInventory) once
+        // logged in - pull it in over whatever localStorage last had, so a
+        // fresh browser/device shows the account's actual items instead of
+        // an empty local mirror.
+        fetch('/api/inventory/')
+            .then(r => r.ok ? r.json() : null)
+            .then(data => {
+                if (data && Array.isArray(data.results)) {
+                    window.gameState.inventory = data.results.map(row => ({
+                        name: row.name, type: row.type, quantity: row.quantity
+                    }));
+                    window.gameState.saveToStorage();
+                }
+            })
+            .catch(err => console.warn('Could not load server inventory (offline?):', err));
+
+        // Same idea for the stat fields the inventory console can touch
+        // (attack/defense/.../skillPoints) - current hp/mp and level/xp
+        // stay client-authoritative (see GameState.js's addExperience) and
+        // are deliberately left alone here.
+        {% if user.player.id %}
+        fetch('/api/players/{{ user.player.id }}/')
+            .then(r => r.ok ? r.json() : null)
+            .then(player => {
+                if (player) {
+                    window.gameState.playerStats = {
+                        ...window.gameState.playerStats,
+                        attack: player.attack,
+                        defense: player.defense,
+                        magicAttack: player.magic_attack,
+                        magicDefense: player.magic_defense,
+                        speed: player.speed,
+                        skillPoints: player.skill_points,
+                        gold: player.gold
+                    };
+                    window.gameState.saveToStorage();
+                }
+            })
+            .catch(err => console.warn('Could not load server player stats (offline?):', err));
+        {% endif %}
         {% endif %}
 
         // Debug utilities available from the browser console

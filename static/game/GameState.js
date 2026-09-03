@@ -4,6 +4,8 @@ class GameState {
         this.playerPosition = { x: 150, y: 500 };
         this.defeatedEnemies = new Set();
         this.collectedKeys = new Set();
+        this.chestItemsTaken = new Set();
+        this.inventory = []; // list of {name, type, quantity} - server is the source of truth once logged in
         this.playerStats = {
             level: 1,
             hp: 100,
@@ -12,6 +14,11 @@ class GameState {
             maxMp: 50,
             attack: 10,
             defense: 5,
+            magicAttack: 8,
+            magicDefense: 4,
+            speed: 10,
+            skillPoints: 0,
+            gold: 0,
             knowledge: 0,
             experience: 0
         };
@@ -22,9 +29,15 @@ class GameState {
         this.loadGameState();
     }
 
-    // How much XP is required to go from `level` to `level + 1`
+    // How much XP is required to go from `level` to `level + 1`.
+    // Matches Player.exp_for_next_level() on the backend (apps/characters/
+    // models.py) - the two used to disagree (this used to be a flat
+    // `level * 100`) since nothing ever synced them; now that stats are
+    // synced to the real Player row (see addExperience() below), the
+    // curves have to match or a player's level would jump around
+    // depending on which side last touched it.
     xpForLevel(level) {
-        return level * 100;
+        return 100 * (level ** 2);
     }
 
     // Level progress info for HUD display (0-1 percent toward next level)
@@ -48,6 +61,8 @@ class GameState {
             playerPosition: this.playerPosition,
             defeatedEnemies: Array.from(this.defeatedEnemies),
             collectedKeys: Array.from(this.collectedKeys),
+            chestItemsTaken: Array.from(this.chestItemsTaken),
+            inventory: this.inventory,
             playerStats: this.playerStats,
             currentZone: this.currentZone || 'PrintForestScene',
             timestamp: Date.now(),
@@ -70,6 +85,8 @@ class GameState {
                 this.playerPosition = parsed.playerPosition || this.playerPosition;
                 this.defeatedEnemies = new Set(parsed.defeatedEnemies || []);
                 this.collectedKeys = new Set(parsed.collectedKeys || []);
+                this.chestItemsTaken = new Set(parsed.chestItemsTaken || []);
+                this.inventory = parsed.inventory || [];
                 this.playerStats = { ...this.playerStats, ...parsed.playerStats };
                 this.currentZone = parsed.currentZone;
                 this.currentSlot = `slot${slotNumber}`;
@@ -124,6 +141,8 @@ class GameState {
                 playerPosition: this.playerPosition,
                 defeatedEnemies: Array.from(this.defeatedEnemies),
                 collectedKeys: Array.from(this.collectedKeys),
+                chestItemsTaken: Array.from(this.chestItemsTaken),
+                inventory: this.inventory,
                 playerStats: this.playerStats,
                 timestamp: Date.now()
             };
@@ -147,6 +166,13 @@ class GameState {
 
     // Adds XP, applying every level-up earned (a big reward can trigger several
     // at once). Returns level-up info so callers (e.g. BattleScene) can show feedback.
+    //
+    // Stat growth per level matches Player.level_up() on the backend
+    // exactly (apps/characters/models.py) - see the note on xpForLevel().
+    // Leveling still happens here, client-side, rather than waiting on a
+    // request, since battles have no other network dependency mid-fight;
+    // syncStatsToServer() below is what makes the backend Player row
+    // agree afterward instead of staying decorative.
     addExperience(xp) {
         this.playerStats.experience = (this.playerStats.experience || 0) + xp;
 
@@ -155,10 +181,14 @@ class GameState {
         while (this.playerStats.experience >= this.xpForLevel(this.playerStats.level)) {
             this.playerStats.experience -= this.xpForLevel(this.playerStats.level);
             this.playerStats.level++;
-            this.playerStats.maxHp += 10;
-            this.playerStats.maxMp += 5;
-            this.playerStats.attack = (this.playerStats.attack || 10) + 2;
-            this.playerStats.defense = (this.playerStats.defense || 5) + 1;
+            this.playerStats.skillPoints = (this.playerStats.skillPoints || 0) + 3;
+            this.playerStats.maxHp += 20;
+            this.playerStats.maxMp += 10;
+            this.playerStats.attack = (this.playerStats.attack || 10) + 3;
+            this.playerStats.defense = (this.playerStats.defense || 5) + 2;
+            this.playerStats.magicAttack = (this.playerStats.magicAttack || 8) + 3;
+            this.playerStats.magicDefense = (this.playerStats.magicDefense || 4) + 2;
+            this.playerStats.speed = (this.playerStats.speed || 10) + 1;
 
             // Full heal on level up
             this.playerStats.hp = this.playerStats.maxHp;
@@ -169,11 +199,95 @@ class GameState {
 
         this.saveToStorage();
 
+        const leveledUp = this.playerStats.level > startingLevel;
+        if (leveledUp) {
+            this.syncStatsToServer();
+        }
+
         return {
-            leveledUp: this.playerStats.level > startingLevel,
+            leveledUp,
             levelsGained: this.playerStats.level - startingLevel,
             level: this.playerStats.level
         };
+    }
+
+    // Fire-and-forget push of the fields a level-up actually changes onto
+    // the real backend Player row (PlayerViewSet.sync_stats). Silently a
+    // no-op if the player isn't logged in / the request fails - local
+    // progress (playerStats/localStorage) is never blocked on this.
+    syncStatsToServer() {
+        const playerId = this.playerStats.id;
+        if (!playerId) return;
+
+        fetch(`/api/players/${playerId}/sync_stats/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': window.CSRF_TOKEN || ''
+            },
+            body: JSON.stringify({
+                level: this.playerStats.level,
+                experience: this.playerStats.experience,
+                max_hp: this.playerStats.maxHp,
+                current_hp: this.playerStats.hp,
+                max_mp: this.playerStats.maxMp,
+                current_mp: this.playerStats.mp,
+                attack: this.playerStats.attack,
+                defense: this.playerStats.defense,
+                magic_attack: this.playerStats.magicAttack,
+                magic_defense: this.playerStats.magicDefense,
+                speed: this.playerStats.speed,
+                skill_points: this.playerStats.skillPoints
+            })
+        }).catch(err => console.warn('syncStatsToServer failed (offline/not logged in?):', err));
+    }
+
+    // Inventory - the server (PlayerInventory, via /api/execute-inventory-code/)
+    // is the source of truth once logged in; this is just the last-synced
+    // local mirror for display and for offline/localStorage save.
+    getInventory() {
+        return [...this.inventory];
+    }
+
+    // Called with the response body of a successful /api/execute-inventory-code/
+    // or /api/execute-shop-code/ call - replaces inventory wholesale and
+    // merges whatever whitelisted stat fields the response includes.
+    // Deliberately only touches fields actually present in playerPatch
+    // (undefined -> keep current value) since the shop endpoint returns a
+    // much narrower patch (just gold) than the general inventory console
+    // does (the full PLAYER_EDITABLE_FIELDS set) - a naive spread would
+    // clobber attack/defense/etc. with undefined after every shop trade.
+    setInventoryAndStats(inventory, playerPatch) {
+        this.inventory = inventory || [];
+        if (playerPatch) {
+            const fieldMap = {
+                attack: 'attack', defense: 'defense',
+                magic_attack: 'magicAttack', magic_defense: 'magicDefense',
+                speed: 'speed', max_hp: 'maxHp', max_mp: 'maxMp',
+                skill_points: 'skillPoints', current_hp: 'hp', current_mp: 'mp',
+                gold: 'gold'
+            };
+            for (const [backendKey, localKey] of Object.entries(fieldMap)) {
+                if (playerPatch[backendKey] !== undefined) {
+                    this.playerStats[localKey] = playerPatch[backendKey];
+                }
+            }
+        }
+        this.saveToStorage();
+    }
+
+    // Marks a chest's item as actually collected (permanent - the chest
+    // itself can still be opened/closed for a look afterward, but stays
+    // empty). Distinct from the chest's current open/closed animation
+    // state, which is per-session and lives on the chest controller
+    // itself (chestAnim.js), not here.
+    takeChestItem(chestId) {
+        this.chestItemsTaken.add(chestId);
+        this.saveToStorage();
+    }
+
+    isChestItemTaken(chestId) {
+        return this.chestItemsTaken.has(chestId);
     }
     
     savePlayerPosition(x, y) {
@@ -221,18 +335,22 @@ class GameState {
                 this.playerPosition = parsed.playerPosition || this.playerPosition;
                 this.defeatedEnemies = new Set(parsed.defeatedEnemies || []);
                 this.collectedKeys = new Set(parsed.collectedKeys || []);
+                this.chestItemsTaken = new Set(parsed.chestItemsTaken || []);
+                this.inventory = parsed.inventory || [];
                 this.playerStats = { ...this.playerStats, ...parsed.playerStats };
             } catch (e) {
                 console.error('Failed to load save data:', e);
             }
         }
     }
-    
+
     resetGame() {
         localStorage.removeItem('chroniclesOfPySave');
         this.playerPosition = { x: 150, y: 500 };
         this.defeatedEnemies.clear();
         this.collectedKeys.clear();
+        this.chestItemsTaken.clear();
+        this.inventory = [];
         this.playerStats = {
             level: 1,
             hp: 100,
@@ -241,6 +359,11 @@ class GameState {
             maxMp: 50,
             attack: 10,
             defense: 5,
+            magicAttack: 8,
+            magicDefense: 4,
+            speed: 10,
+            skillPoints: 0,
+            gold: 0,
             knowledge: 0,
             experience: 0
         };

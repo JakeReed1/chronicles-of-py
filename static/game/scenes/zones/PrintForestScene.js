@@ -1,5 +1,17 @@
 import { COLORS, TEXT, createPanel, createGlowTitle } from '../../theme.js';
-import { directionFromInput, heroWalkAnimKey, heroIdleFrame } from '../../heroAnim.js';
+import { triggerBattleEncounter } from '../../battleEncounter.js';
+
+// chestAnim.js and heroAnim.js are relative imports, invisible to
+// game.html's top-level cache-busting (window.ASSET_VERSION) - a browser
+// that already cached an older copy of either would keep serving those
+// stale bytes here even after a normal reload, the same issue theme.js
+// hit earlier. Versioned dynamic import dodges it for every consumer.
+const localModuleVersion = window.ASSET_VERSION || Date.now();
+const { createChestController } = await import(`../../chestAnim.js?v=${localModuleVersion}`);
+const { directionFromInput, heroWalkAnimKey, heroRunAnimKey, heroIdleFrame } =
+    await import(`../../heroAnim.js?v=${localModuleVersion}`);
+
+const PRINT_FOREST_CHEST_ID = 'print-forest-chest-1';
 
 // World Scene - First Level: The Print() Forest
 export default class PrintForestScene extends Phaser.Scene {
@@ -8,6 +20,14 @@ export default class PrintForestScene extends Phaser.Scene {
     }
 
     create() {
+        // Phaser reuses one scene instance for the lifetime of the game
+        // rather than creating a fresh one per scene.start() - so a flag
+        // set true on the way OUT of this zone would otherwise still read
+        // true the next time the player enters it, permanently blocking
+        // every future exit (this was the real cause behind "can leave
+        // going backward but can never leave going forward again").
+        this.zoneTransitioning = false;
+
         // Track which zone the player is in (used by save/load and battle returns)
         window.gameState.currentZone = 'PrintForestScene';
 
@@ -23,7 +43,23 @@ export default class PrintForestScene extends Phaser.Scene {
         
         // Create player
         this.createPlayer();
-        
+
+        // Treasure chest - needs the player to already exist (its overlap
+        // trigger references this.player). Open floor, clear of the ruin
+        // walls and the nearest patrolling slimes.
+        this.chest = createChestController(this, 1700, 700, {
+            chestId: PRINT_FOREST_CHEST_ID,
+            itemName: 'Health Potion',
+            itemType: 'consumable',
+            goldAmount: 15,
+            standout: 'glow' // settled on this style (rune-emblem art + soft pulsing light) for all zones
+        });
+
+        // Shopkeeper NPC - buy/sell via the shop console, same "stand
+        // nearby and press E" interaction as a chest, but simpler: no
+        // open/close animation, just a static idle sprite.
+        this.createShopkeeper();
+
         // Create tutorial enemies
         this.createTutorialEnemies();
 
@@ -159,6 +195,43 @@ export default class PrintForestScene extends Phaser.Scene {
 
     // Spawns the boss's key in the world once the boss is defeated, until
     // the player walks over and picks it up
+    createShopkeeper() {
+        // Open floor between the cottage ruin and the lower wavy wall, near
+        // the tutorial sign so new players spot it early.
+        this.shopkeeper = this.physics.add.staticSprite(450, 850, 'shopkeeper');
+        this.shopkeeper.setScale(1.06); // +25% (was 0.85)
+        this.shopkeeper.refreshBody();
+        // Solid like every other level prop - can't walk through the NPC.
+        this.physics.add.collider(this.player, this.shopkeeper);
+
+        this.shopInteractKey = this.input.keyboard.addKey('E');
+        this.shopPrompt = this.add.text(450, 850 - 55, 'Press E to shop', {
+            fontSize: '16px', fontFamily: 'monospace', color: '#ffe066',
+            stroke: '#000000', strokeThickness: 4
+        }).setOrigin(0.5).setVisible(false);
+
+        // Distance check, not physics.overlap() - now that the shopkeeper
+        // is a solid collider, the two bodies never truly overlap (Arcade
+        // Physics keeps them separated to just touching).
+        // Must clear the resting distance the collider itself leaves
+        // between the two bodies once blocked (~77px measured) with real
+        // margin, or the prompt could never actually appear.
+        const shopInteractRadius = 100;
+        let nearShop = false;
+        this.events.on('update', () => {
+            if (!this.player || !this.player.body) return;
+            const overlapping = Phaser.Math.Distance.Between(this.player.x, this.player.y, this.shopkeeper.x, this.shopkeeper.y) < shopInteractRadius;
+            if (overlapping !== nearShop) {
+                nearShop = overlapping;
+                this.shopPrompt.setVisible(overlapping);
+            }
+            if (overlapping && Phaser.Input.Keyboard.JustDown(this.shopInteractKey)) {
+                this.scene.pause();
+                this.scene.launch('ShopScene', { returnScene: 'PrintForestScene' });
+            }
+        });
+    }
+
     createBossKey() {
         const bossDefeated = window.gameState.isEnemyDefeated('boss1');
         const keyCollected = window.gameState.hasKey('boss1_key');
@@ -228,7 +301,7 @@ export default class PrintForestScene extends Phaser.Scene {
         // sized smaller than the old placeholder to read better on the map
         this.player = this.physics.add.sprite(position.x, position.y, 'hero', heroIdleFrame('south'));
         this.player.setCollideWorldBounds(true);
-        this.player.setScale(0.64);
+        this.player.setScale(0.96); // +20% (was 0.8)
         this.player.facing = 'south';
 
         // Set up physics properties for top-down
@@ -238,18 +311,6 @@ export default class PrintForestScene extends Phaser.Scene {
 
         // Add player shadow for depth
         this.playerShadow = this.add.ellipse(150, 520, 40, 18, 0x000000, 0.3);
-        
-        // Add player name
-        this.playerNameText = this.add.text(0, -40, 'Python Hero', {
-            fontSize: '18px',  // Increased from 12px to 18px
-            fontFamily: 'monospace',
-            color: '#ffffff',
-            stroke: '#000000',
-            strokeThickness: 3  // Increased from 2 to 3
-        }).setOrigin(0.5);
-        
-        // Make name follow player
-        this.player.nameText = this.playerNameText;
 
         // Movement speed
         this.player.moveSpeed = 200;
@@ -276,7 +337,7 @@ export default class PrintForestScene extends Phaser.Scene {
             const shadow = this.add.ellipse(data.x, data.y + 15, 45, 23, 0x000000, 0.3);  // Increased shadow size
 
             const enemy = this.enemies.create(data.x, data.y, data.texture, 0);
-            const targetWidth = data.id === 'boss1' ? 130 : 74;
+            const targetWidth = data.id === 'boss1' ? 163 : 93; // +25% (was 130/74)
             const textureWidth = this.textures.get(data.texture).get(0).width;
             enemy.setScale(targetWidth / textureWidth);
             enemy.name = data.name;
@@ -392,6 +453,11 @@ export default class PrintForestScene extends Phaser.Scene {
 
         // Add ESC key for pause menu
         this.input.keyboard.on('keydown-ESC', () => {
+            // These handlers stay registered while this scene is paused
+            // (Phaser doesn't gate keyboard listeners on scene.pause()),
+            // so a Shop/Inventory console open on top would otherwise
+            // still catch ESC/I/Enter typed into its code editor.
+            if (!this.scene.isActive()) return;
             console.log('ESC pressed - opening pause menu');
             this.scene.pause();
             this.scene.launch('PauseMenuScene', {
@@ -399,13 +465,25 @@ export default class PrintForestScene extends Phaser.Scene {
             });
             console.log('returnscene:', 'PrintForestScene');
         });
+
+        // Open the inventory/progression console - Enter is a second
+        // binding for the exact same action as I, not a different one
+        const openInventoryConsole = () => {
+            if (!this.scene.isActive()) return;
+            this.scene.pause();
+            this.scene.launch('InventoryScene', {
+                returnScene: 'PrintForestScene'
+            });
+        };
+        this.input.keyboard.on('keydown-I', openInventoryConsole);
+        this.input.keyboard.on('keydown-ENTER', openInventoryConsole);
     }
-    
+
     showTutorialMessage() {
         const tutorialText = this.add.text(1280, 360,
             'Welcome to Chronicles of Py!\n\n' +
             'Use ARROW KEYS or WASD to move in any direction\n' +
-            'Hold SHIFT to run faster\n' +
+            'You run by default - hold SHIFT to walk instead\n' +
             'Walk into enemies to battle\n' +
             'Defeat enemies by writing Python code!\n\n' +
             'Start with the Print Slime to learn the basics!',
@@ -463,36 +541,7 @@ export default class PrintForestScene extends Phaser.Scene {
     }
     
     startBattle(player, enemy) {
-        // Disable enemy to prevent multiple triggers
-        enemy.disableBody(true, false);
-
-        // Save player position before battle
-        window.gameState.savePlayerPosition(this.player.x, this.player.y);
-
-        // Store enemy data for battle
-        window.gameState.currentEnemy = {
-            name: enemy.name,
-            difficulty: enemy.difficulty,
-            sprite: enemy.texture.key,
-            id: enemy.id,
-            stats: enemy.stats
-        };
-
-        // Remember which zone to return to after the battle
-        window.gameState.battleReturnScene = 'PrintForestScene';
-
-        // Fade out and start battle. The transition runs off a timer rather
-        // than the 'camerafadeoutcomplete' event - that event can fail to
-        // fire (observed under software/headless rendering), which would
-        // otherwise strand the player on a faded-out screen forever.
-        this.cameras.main.fade(500, 0, 0, 0);
-        this.time.delayedCall(500, () => {
-            enemy.destroy();
-
-            // Switch to battle scene
-            this.scene.stop('UIScene');
-            this.scene.switch('BattleScene');
-        });
+        triggerBattleEncounter(this, { player, enemy, returnScene: 'PrintForestScene' });
     }
 
     enterLoopForest() {
@@ -554,9 +603,12 @@ export default class PrintForestScene extends Phaser.Scene {
     update() {
         if (!this.player) return;
         
-        // Player movement for top-down view
+        // Player movement for top-down view - running is the default (per
+        // request), holding Shift is now the "walk slower" button instead
+        // of a sprint boost.
         const baseSpeed = this.player.moveSpeed;
-        const speed = this.shiftKey.isDown ? baseSpeed * 1.5 : baseSpeed; // Sprint when holding shift
+        const isWalking = this.shiftKey.isDown;
+        const speed = isWalking ? baseSpeed : baseSpeed * 1.5;
         
         // 8-directional movement
         let velocityX = 0;
@@ -582,56 +634,35 @@ export default class PrintForestScene extends Phaser.Scene {
         // Apply velocity
         this.player.setVelocity(velocityX, velocityY);
 
-        // Play the matching directional walk animation, or hold the idle
-        // pose facing whichever way the hero last moved
+        // Play the matching directional walk/run animation, or hold the
+        // idle pose facing whichever way the hero last moved
         const dir = directionFromInput(up, down, left, right);
         if (dir) {
             this.player.facing = dir;
-            this.player.anims.play(heroWalkAnimKey(dir), true);
+            this.player.anims.play(isWalking ? heroWalkAnimKey(dir) : heroRunAnimKey(dir), true);
         } else {
             this.player.anims.stop();
             this.player.setFrame(heroIdleFrame(this.player.facing));
         }
         
-        // Update player name and shadow positions
-        if (this.player.nameText) {
-            this.player.nameText.x = this.player.x;
-            this.player.nameText.y = this.player.y - 30;
-        }
-        
+        // Update player shadow position
         if (this.playerShadow) {
             this.playerShadow.x = this.player.x;
             this.playerShadow.y = this.player.y + 10;
         }
         
-        // Add sprint particles effect
-        if (this.shiftKey.isDown && (velocityX !== 0 || velocityY !== 0)) {
-            if (Math.random() < 0.3) {
-                const particle = this.add.circle(
-                    this.player.x + Phaser.Math.Between(-10, 10),
-                    this.player.y + 15,
-                    2,
-                    0xFFFFFF,
-                    0.5
-                );
-                
-                this.tweens.add({
-                    targets: particle,
-                    alpha: 0,
-                    scale: 0,
-                    duration: 300,
-                    onComplete: () => particle.destroy()
-                });
-            }
-        }
         
-        // Save player position periodically (every 60 frames, roughly once per second at 60fps)
+        // Save player position periodically (every 60 frames, roughly once per second at 60fps) -
+        // skipped once a zone transition has already picked the spawn point
+        // for the NEXT zone (e.g. enterLoopForest()'s savePlayerPosition(150, 720)),
+        // otherwise this generic tracker can fire during the fade-out delay
+        // and clobber it with the player's old on-screen position.
         if (!this.saveTimer) {
             this.saveTimer = 0;
         }
         this.saveTimer++;
         if (this.saveTimer >= 60) {
-            window.gameState.savePlayerPosition(this.player.x, this.player.y);
+            if (!this.zoneTransitioning) window.gameState.savePlayerPosition(this.player.x, this.player.y);
             this.saveTimer = 0;
         }
     }

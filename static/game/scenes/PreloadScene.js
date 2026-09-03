@@ -1,5 +1,22 @@
-import { createHeroAnimations, createHeroAttackAnimation } from '../heroAnim.js';
 import { createEnemyAnimations } from '../enemyAnim.js';
+// chestAnim.js is a relative import, invisible to game.html's top-level
+// cache-busting (window.ASSET_VERSION) - a browser that already cached an
+// older copy (e.g. from before the chest-forest defaults) would keep
+// serving those stale bytes here even after a normal reload, the same
+// issue theme.js/heroAnim.js hit earlier. Versioned dynamic import dodges
+// it for every consumer.
+const chestAnimVersion = window.ASSET_VERSION || Date.now();
+const { createChestOpenAnimation, FOREST_CHEST_OPEN_ANIM_KEY } =
+    await import(`../chestAnim.js?v=${chestAnimVersion}`);
+
+// heroAnim.js is a relative import, invisible to game.html's top-level
+// cache-busting (window.ASSET_VERSION) - a browser that already cached an
+// older copy (from before an export existed) would keep serving those
+// stale bytes here even after a normal reload, the same issue theme.js hit
+// earlier. Versioned dynamic import dodges it for every consumer.
+const heroAnimVersion = window.ASSET_VERSION || Date.now();
+const { createHeroAnimations, createHeroAttackAnimation, createHeroRunAnimations } =
+    await import(`../heroAnim.js?v=${heroAnimVersion}`);
 
 // Preload Scene - Load all game assets
 export default class PreloadScene extends Phaser.Scene {
@@ -63,6 +80,12 @@ export default class PreloadScene extends Phaser.Scene {
         // replacing the earlier single soft-edged static portrait - see
         // heroAnim.js for the frame grid layout
         this.load.spritesheet('hero', '/static/game/assets/sprites/hero_walk.png', { frameWidth: 128, frameHeight: 128 });
+        // 172x172 per frame, not 128 like the walk sheet - this v3 custom
+        // sprint animation has more limb extension than the rigid walk
+        // template, so PixelLab grew the canvas per-direction (164-172px)
+        // to fit it; every frame here is padded to the largest of those,
+        // pivot-centered, for one uniform grid.
+        this.load.spritesheet('hero-run', '/static/game/assets/sprites/hero_run.png', { frameWidth: 172, frameHeight: 172 });
 
         // Print Forest's background (PixelLab pro) - the ruined brick
         // buildings, garden walls, and trees are painted directly into this
@@ -78,13 +101,21 @@ export default class PreloadScene extends Phaser.Scene {
         this.load.image('loop-forest-background', '/static/game/assets/level_background/loop_forest_background.png');
 
         // Battle-scene backdrops (PixelLab) - proper illustrated JRPG battle
-        // screens, 2 variants per zone picked at random in BattleScene,
+        // screens, 3 variants per zone picked at random in BattleScene,
         // replacing the earlier stand-in that just stretched the ground
-        // texture (see marketing/battle_background_prompt.md)
+        // texture (see marketing/battle_background_prompt.md). The original
+        // "clearing"/"crystals" generations had a large unpainted (fully
+        // transparent) gap in the upper-middle - barely visible against the
+        // caverns' already-dark palette, but glaring against the forest's
+        // bright green trees. Both were regenerated fully opaque edge to
+        // edge; "outcrop"/"tunnel" didn't have the same defect and are
+        // untouched.
         this.load.image('battle-forest-clearing', '/static/game/assets/level_background/battle_forest_clearing.png');
         this.load.image('battle-forest-outcrop', '/static/game/assets/level_background/battle_forest_outcrop.png');
+        this.load.image('battle-forest-log', '/static/game/assets/level_background/battle_forest_log.png');
         this.load.image('battle-cavern-tunnel', '/static/game/assets/level_background/battle_cavern_tunnel.png');
         this.load.image('battle-cavern-crystals', '/static/game/assets/level_background/battle_cavern_crystals.png');
+        this.load.image('battle-cavern-pool', '/static/game/assets/level_background/battle_cavern_pool.png');
 
         // Ground/terrain textures - user-generated pixel art. Two variants
         // per biome so zones can patchwork between them instead of tiling
@@ -131,8 +162,18 @@ export default class PreloadScene extends Phaser.Scene {
 
         // Spell VFX (FreePixel.art, free commercial use) - see assets/vfx/LICENSE.txt
         this.load.image('fx-fireball', '/static/game/assets/vfx/fireball.png');
-        this.load.image('fx-lightning', '/static/game/assets/vfx/thunder_bolt.png');
-        
+        this.load.spritesheet('fx-lightning', '/static/game/assets/vfx/thunder_bolt.png', { frameWidth: 84, frameHeight: 161 });
+
+        // Treasure chest - one shared design (Print Forest's warm-toned
+        // art) reused by every zone's chest rather than a per-zone
+        // palette, plus a one-shot opening animation, same 9-frame-style
+        // spritesheet convention as the enemy attack sheets.
+        this.load.image('chest-forest', '/static/game/assets/props/chest_forest.png');
+        this.load.spritesheet('chest-forest-open', '/static/game/assets/props/chest_forest_open.png', { frameWidth: 96, frameHeight: 96 });
+
+        // Shop NPC (Print Forest) - single static idle sprite, no walk/attack
+        this.load.image('shopkeeper', '/static/game/assets/props/shopkeeper.png');
+
         // Don't load any external files - we'll create everything programmatically
         // Just trigger the load complete event
         this.load.start();
@@ -145,8 +186,10 @@ export default class PreloadScene extends Phaser.Scene {
         // Register the hero's directional walk/attack animations, and every
         // enemy's attack animation, once, globally
         createHeroAnimations(this);
+        createHeroRunAnimations(this);
         createHeroAttackAnimation(this);
         createEnemyAnimations(this);
+        createChestOpenAnimation(this, { animKey: FOREST_CHEST_OPEN_ANIM_KEY, textureKey: 'chest-forest-open' });
     }
     
     createGameTextures() {

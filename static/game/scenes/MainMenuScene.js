@@ -29,30 +29,37 @@ export default class MainMenuScene extends Phaser.Scene {
         // side (hit-slop, for trackpad tolerance), so adjacent buttons need
         // at least height + 2*20 = 96px of spacing or their hit zones
         // overlap - which was causing clicks on one button to sometimes
-        // resolve to its neighbor instead
-        const buttonSpacing = 100;
+        // resolve to its neighbor instead. 100 technically cleared that but
+        // only by 4px, razor-thin against any rounding; 110 leaves real margin.
+        const buttonSpacing = 110;
+        // Tracked so showConfirmDialog() can disable these while its own
+        // Yes/Cancel buttons are showing - the dialog draws a dim overlay
+        // on top, but that's purely visual, and doesn't stop these buttons'
+        // hit zones (which sit right underneath the dialog's own buttons)
+        // from still catching clicks meant for the dialog.
+        this.mainButtons = [];
 
         if (hasSaveGame) {
-            createButton(this, width / 2, buttonY, buttonWidth, buttonHeight, 'Continue', {
+            this.mainButtons.push(createButton(this, width / 2, buttonY, buttonWidth, buttonHeight, 'Continue', {
                 fillColor: COLORS.success,
                 hoverColor: COLORS.successHover,
                 onClick: () => this.continueGame()
-            });
+            }));
             buttonY += buttonSpacing;
         }
 
-        createButton(this, width / 2, buttonY, buttonWidth, buttonHeight, 'New Adventure', {
+        this.mainButtons.push(createButton(this, width / 2, buttonY, buttonWidth, buttonHeight, 'New Adventure', {
             fillColor: COLORS.info,
             hoverColor: COLORS.infoHover,
             onClick: () => this.startNewGame()
-        });
+        }));
         buttonY += buttonSpacing;
 
-        createButton(this, width / 2, buttonY, buttonWidth, buttonHeight, 'Tutorial', {
+        this.mainButtons.push(createButton(this, width / 2, buttonY, buttonWidth, buttonHeight, 'Tutorial', {
             fillColor: COLORS.neutral,
             hoverColor: COLORS.neutralHover,
             onClick: () => this.startTutorial()
-        });
+        }));
 
         if (hasSaveGame) {
             this.createPlayerInfoPanel();
@@ -128,6 +135,12 @@ export default class MainMenuScene extends Phaser.Scene {
     showConfirmDialog() {
         const { width, height } = this.cameras.main;
 
+        // The dim overlay below is purely visual - without this, the main
+        // stack's buttons (Continue/New Adventure/Tutorial) sit right
+        // underneath the dialog's own buttons and their hit zones overlap,
+        // so a click meant for "Cancel" could also land on "New Adventure".
+        this.mainButtons.forEach(btn => btn.disableInteractive());
+
         const overlay = this.add.rectangle(width / 2, height / 2, width, height, 0x000000, 0.7);
         const dialog = createPanel(this, width / 2, height / 2, 460, 220, { radius: 16 });
 
@@ -139,7 +152,9 @@ export default class MainMenuScene extends Phaser.Scene {
             align: 'center'
         }).setOrigin(0.5);
 
-        const yesButton = createButton(this, width / 2 - 90, height / 2 + 40, 140, 50, 'Yes', {
+        // width 140 + 2*20 hit-slop = 180px minimum spacing to not overlap -
+        // these were exactly 180 apart (zero margin); 220 leaves real room.
+        const yesButton = createButton(this, width / 2 - 110, height / 2 + 40, 140, 50, 'Yes', {
             fillColor: COLORS.danger,
             hoverColor: COLORS.dangerHover,
             onClick: () => {
@@ -148,7 +163,7 @@ export default class MainMenuScene extends Phaser.Scene {
             }
         });
 
-        const noButton = createButton(this, width / 2 + 90, height / 2 + 40, 140, 50, 'Cancel', {
+        const noButton = createButton(this, width / 2 + 110, height / 2 + 40, 140, 50, 'Cancel', {
             fillColor: COLORS.neutral,
             hoverColor: COLORS.neutralHover,
             onClick: () => {
@@ -157,6 +172,7 @@ export default class MainMenuScene extends Phaser.Scene {
                 message.destroy();
                 yesButton.destroy();
                 noButton.destroy();
+                this.mainButtons.forEach(btn => btn.setInteractive());
             }
         });
     }

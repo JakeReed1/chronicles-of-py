@@ -4,14 +4,15 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from django.shortcuts import get_object_or_404
 
-from apps.characters.models import Player, Enemy
+from apps.characters.models import Player, Enemy, PlayerInventory
 from apps.battles.models import Battle
 from apps.world.models import Location, Quest
 from apps.lessons.models import Lesson, Challenge
 
 from .serializers import (
     PlayerSerializer, EnemySerializer, BattleSerializer,
-    LocationSerializer, QuestSerializer, LessonSerializer
+    LocationSerializer, QuestSerializer, LessonSerializer,
+    PlayerInventorySerializer
 )
 
 
@@ -31,6 +32,31 @@ class PlayerViewSet(viewsets.ModelViewSet):
         player.current_mp = player.max_mp
         player.save()
         return Response(PlayerSerializer(player).data)
+
+    @action(detail=True, methods=['post'])
+    def sync_stats(self, request, pk=None):
+        """Apply a client-computed level-up (GameState.js's addExperience)
+        onto the real backend Player row, so it stops being decorative.
+        Only touches the fields a level-up actually changes - never lets
+        the client set experience/level to anything it wants."""
+        player = self.get_object()
+        for field in ['level', 'experience', 'max_hp', 'current_hp', 'max_mp',
+                      'current_mp', 'attack', 'defense', 'magic_attack',
+                      'magic_defense', 'speed', 'skill_points']:
+            if field in request.data:
+                setattr(player, field, request.data[field])
+        player.save()
+        return Response(PlayerSerializer(player).data)
+
+
+class PlayerInventoryViewSet(viewsets.ReadOnlyModelViewSet):
+    """Read-only API for a player's inventory - the actual mutation path is
+    /api/execute-inventory-code/, not this (see apps/battles/api_views.py)."""
+    serializer_class = PlayerInventorySerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return PlayerInventory.objects.filter(player__user=self.request.user).select_related('item')
 
 
 class BattleViewSet(viewsets.ModelViewSet):

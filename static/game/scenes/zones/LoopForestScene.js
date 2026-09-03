@@ -1,5 +1,17 @@
 import { COLORS, TEXT, createPanel, createGlowTitle } from '../../theme.js';
-import { directionFromInput, heroWalkAnimKey, heroIdleFrame } from '../../heroAnim.js';
+import { triggerBattleEncounter } from '../../battleEncounter.js';
+
+// chestAnim.js and heroAnim.js are relative imports, invisible to
+// game.html's top-level cache-busting (window.ASSET_VERSION) - a browser
+// that already cached an older copy of either would keep serving those
+// stale bytes here even after a normal reload, the same issue theme.js
+// hit earlier. Versioned dynamic import dodges it for every consumer.
+const localModuleVersion = window.ASSET_VERSION || Date.now();
+const { createChestController } = await import(`../../chestAnim.js?v=${localModuleVersion}`);
+const { directionFromInput, heroWalkAnimKey, heroRunAnimKey, heroIdleFrame } =
+    await import(`../../heroAnim.js?v=${localModuleVersion}`);
+
+const LOOP_FOREST_CHEST_ID = 'loop-forest-chest-1';
 
 // World Scene - Second Level: The Loop Forest
 export default class LoopForestScene extends Phaser.Scene {
@@ -8,6 +20,14 @@ export default class LoopForestScene extends Phaser.Scene {
     }
 
     create() {
+        // Phaser reuses one scene instance for the lifetime of the game
+        // rather than creating a fresh one per scene.start() - so a flag
+        // set true on the way OUT of this zone would otherwise still read
+        // true the next time the player enters it, permanently blocking
+        // every future exit (this was the real cause behind "can leave
+        // going backward but can never leave going forward again").
+        this.zoneTransitioning = false;
+
         // Track which zone the player is in (used by save/load and battle returns)
         window.gameState.currentZone = 'LoopForestScene';
 
@@ -23,6 +43,21 @@ export default class LoopForestScene extends Phaser.Scene {
 
         // Create player
         this.createPlayer();
+
+        // Treasure chest - needs the player to already exist (its overlap
+        // trigger references this.player). Open floor between the inner
+        // and outer tree rings, clear of the standing stones and patrols.
+        // Center of the small clearing inside the inner tree ring - open
+        // ground, clear of every solid and enemy in the zone. The old spot
+        // (1450, 950) ended up mostly hidden under a tree canopy once the
+        // chest's scale went up.
+        this.chest = createChestController(this, 856, 580, {
+            chestId: LOOP_FOREST_CHEST_ID,
+            itemName: 'Mana Potion',
+            itemType: 'consumable',
+            goldAmount: 20,
+            standout: 'glow' // settled on this style (rune-emblem art + soft pulsing light) for all zones
+        });
 
         // Create enemies
         this.createEnemies();
@@ -233,7 +268,7 @@ export default class LoopForestScene extends Phaser.Scene {
 
         this.player = this.physics.add.sprite(position.x, position.y, 'hero', heroIdleFrame('south'));
         this.player.setCollideWorldBounds(true);
-        this.player.setScale(0.64);
+        this.player.setScale(0.96); // +20% (was 0.8)
         this.player.facing = 'south';
 
         this.player.setBounce(0);
@@ -241,16 +276,6 @@ export default class LoopForestScene extends Phaser.Scene {
         this.player.body.setSize(22, 22);
 
         this.playerShadow = this.add.ellipse(position.x, position.y + 20, 40, 18, 0x000000, 0.3);
-
-        this.playerNameText = this.add.text(0, -40, 'Python Hero', {
-            fontSize: '18px',
-            fontFamily: 'monospace',
-            color: '#ffffff',
-            stroke: '#000000',
-            strokeThickness: 3
-        }).setOrigin(0.5);
-
-        this.player.nameText = this.playerNameText;
 
         this.player.moveSpeed = 200;
     }
@@ -274,7 +299,11 @@ export default class LoopForestScene extends Phaser.Scene {
             const shadow = this.add.ellipse(data.x, data.y + 22, 45, 16, 0x000000, 0.3);
 
             const enemy = this.enemies.create(data.x, data.y, data.texture, 0);
-            const targetWidth = data.id === 'boss2' ? 130 : 74;
+            // boss2's source art has noticeably more transparent padding
+            // around it than the other bosses' (visible content only ~84%
+            // of its frame width vs ~89% for boss1), so it read smaller
+            // even at the "same" target width - bumped further to compensate.
+            const targetWidth = data.id === 'boss2' ? 190 : 93;
             const textureWidth = this.textures.get(data.texture).get(0).width;
             enemy.setScale(targetWidth / textureWidth);
             enemy.name = data.name;
@@ -374,11 +403,28 @@ export default class LoopForestScene extends Phaser.Scene {
         this.shiftKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SHIFT);
 
         this.input.keyboard.on('keydown-ESC', () => {
+            // These handlers stay registered while this scene is paused
+            // (Phaser doesn't gate keyboard listeners on scene.pause()),
+            // so a Shop/Inventory console open on top would otherwise
+            // still catch ESC/I/Enter typed into its code editor.
+            if (!this.scene.isActive()) return;
             this.scene.pause();
             this.scene.launch('PauseMenuScene', {
                 returnScene: 'LoopForestScene'
             });
         });
+
+        // Enter is a second binding for the exact same action as I, not a
+        // different one
+        const openInventoryConsole = () => {
+            if (!this.scene.isActive()) return;
+            this.scene.pause();
+            this.scene.launch('InventoryScene', {
+                returnScene: 'LoopForestScene'
+            });
+        };
+        this.input.keyboard.on('keydown-I', openInventoryConsole);
+        this.input.keyboard.on('keydown-ENTER', openInventoryConsole);
     }
 
     showZoneMessage() {
@@ -440,31 +486,7 @@ export default class LoopForestScene extends Phaser.Scene {
     }
 
     startBattle(player, enemy) {
-        enemy.disableBody(true, false);
-
-        window.gameState.savePlayerPosition(this.player.x, this.player.y);
-
-        window.gameState.currentEnemy = {
-            name: enemy.name,
-            difficulty: enemy.difficulty,
-            sprite: enemy.texture.key,
-            id: enemy.id,
-            stats: enemy.stats
-        };
-
-        window.gameState.battleReturnScene = 'LoopForestScene';
-
-        // The transition runs off a timer rather than the
-        // 'camerafadeoutcomplete' event - that event can fail to fire
-        // (observed under software/headless rendering), which would
-        // otherwise strand the player on a faded-out screen forever.
-        this.cameras.main.fade(500, 0, 0, 0);
-        this.time.delayedCall(500, () => {
-            enemy.destroy();
-
-            this.scene.stop('UIScene');
-            this.scene.switch('BattleScene');
-        });
+        triggerBattleEncounter(this, { player, enemy, returnScene: 'LoopForestScene' });
     }
 
     enterPrintForest() {
@@ -540,8 +562,10 @@ export default class LoopForestScene extends Phaser.Scene {
     update() {
         if (!this.player) return;
 
+        // Running is the default (per request); holding Shift walks slower
         const baseSpeed = this.player.moveSpeed;
-        const speed = this.shiftKey.isDown ? baseSpeed * 1.5 : baseSpeed;
+        const isWalking = this.shiftKey.isDown;
+        const speed = isWalking ? baseSpeed : baseSpeed * 1.5;
 
         let velocityX = 0;
         let velocityY = 0;
@@ -567,15 +591,10 @@ export default class LoopForestScene extends Phaser.Scene {
         const dir = directionFromInput(up, down, left, right);
         if (dir) {
             this.player.facing = dir;
-            this.player.anims.play(heroWalkAnimKey(dir), true);
+            this.player.anims.play(isWalking ? heroWalkAnimKey(dir) : heroRunAnimKey(dir), true);
         } else {
             this.player.anims.stop();
             this.player.setFrame(heroIdleFrame(this.player.facing));
-        }
-
-        if (this.player.nameText) {
-            this.player.nameText.x = this.player.x;
-            this.player.nameText.y = this.player.y - 30;
         }
 
         if (this.playerShadow) {
@@ -583,32 +602,16 @@ export default class LoopForestScene extends Phaser.Scene {
             this.playerShadow.y = this.player.y + 10;
         }
 
-        if (this.shiftKey.isDown && (velocityX !== 0 || velocityY !== 0)) {
-            if (Math.random() < 0.3) {
-                const particle = this.add.circle(
-                    this.player.x + Phaser.Math.Between(-10, 10),
-                    this.player.y + 15,
-                    2,
-                    0xFFFFFF,
-                    0.5
-                );
 
-                this.tweens.add({
-                    targets: particle,
-                    alpha: 0,
-                    scale: 0,
-                    duration: 300,
-                    onComplete: () => particle.destroy()
-                });
-            }
-        }
-
+        // Skipped once a zone transition has already picked the spawn point
+        // for the NEXT zone, otherwise this generic tracker can fire during
+        // the fade-out delay and clobber it with the player's old position.
         if (!this.saveTimer) {
             this.saveTimer = 0;
         }
         this.saveTimer++;
         if (this.saveTimer >= 60) {
-            window.gameState.savePlayerPosition(this.player.x, this.player.y);
+            if (!this.zoneTransitioning) window.gameState.savePlayerPosition(this.player.x, this.player.y);
             this.saveTimer = 0;
         }
     }

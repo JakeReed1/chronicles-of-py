@@ -7,14 +7,16 @@ from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib.auth.views import LogoutView
 from apps.core.views import HomeView, SignUpView, CustomLoginView, game_view
-from apps.battles.api_views import execute_python_code
+from apps.battles.api_views import execute_python_code, execute_inventory_code, execute_shop_code
 
 urlpatterns = [
     path('', HomeView.as_view(), name='home'),
     path('admin/', admin.site.urls),
-    
+
     # Direct API endpoint for code execution
     path('api/execute-code/', execute_python_code, name='execute_code'),
+    path('api/execute-inventory-code/', execute_inventory_code, name='execute_inventory_code'),
+    path('api/execute-shop-code/', execute_shop_code, name='execute_shop_code'),
     
     # Game
     path('game/', game_view, name='game'),

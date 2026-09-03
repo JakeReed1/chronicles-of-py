@@ -26,6 +26,18 @@ clear horizon line and sense of depth - NOT top-down, NOT a texture, NOT a
 tile. No characters or creatures in the scene - they get placed on top of
 this backdrop separately."
 
+**Generate with a fully opaque background (no transparency), not a
+character/prop cutout.** The first batch (all 4 original images) came back
+as a small painted vignette centered on an otherwise fully transparent
+canvas - PixelLab's default for "asset" generations. BattleScene.js stretches
+the image to fill the whole battle screen exactly, so any transparent margin
+renders as a solid black border/hole. It was glaring on the forest art
+(bright green trees against black) and easy to miss on the cavern art
+(already dark, so a transparent edge just blends in) - but both were
+equally broken. If generating via the PixelLab MCP tools, pass
+`no_background: false` on `create_image_pro` and explicitly state in the
+prompt that the entire canvas must be painted edge to edge.
+
 ## Subject lines (generate 2-3 per zone for variety)
 
 **Print Forest / Loop Forest battle background:**

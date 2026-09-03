@@ -15,7 +15,7 @@ export default class UIScene extends Phaser.Scene {
 
     setupUI() {
         // Escape menu hint
-        this.add.text(10, this.cameras.main.height - 34, 'Press ESC for menu', {
+        this.add.text(10, this.cameras.main.height - 34, 'Press ESC for menu  |  Press I for inventory', {
             fontSize: '14px',
             fontFamily: 'monospace',
             color: TEXT.secondary,
@@ -27,9 +27,9 @@ export default class UIScene extends Phaser.Scene {
     createHUD() {
         const barWidth = 200;
         const panelX = 130;
-        const panelY = 58;
+        const panelY = 67;
 
-        createPanel(this, panelX, panelY, 240, 100, { radius: 12 });
+        createPanel(this, panelX, panelY, 240, 118, { radius: 12 });
 
         this.hudLevelText = this.add.text(20, 20, '', {
             fontSize: '18px',
@@ -46,6 +46,16 @@ export default class UIScene extends Phaser.Scene {
         this.hpBar = createBar(this, 20, 66, barWidth, 10, COLORS.hp);
         this.xpBar = createBar(this, 20, 82, barWidth, 6, COLORS.xp);
 
+        // Gold has nowhere else visible during normal play - the inventory/
+        // shop consoles show it too, but a player who just picked some up
+        // from a chest has no way to confirm it landed without opening
+        // one of those.
+        this.hudGoldText = this.add.text(20, 96, '', {
+            fontSize: '14px',
+            fontFamily: 'monospace',
+            color: TEXT.gold
+        });
+
         this.updateHUD();
         this.time.addEvent({ delay: 250, loop: true, callback: () => this.updateHUD() });
     }
@@ -56,6 +66,7 @@ export default class UIScene extends Phaser.Scene {
 
         this.hudLevelText.setText(`Lv. ${stats.level}  Python Hero`);
         this.hudHpText.setText(`HP ${stats.hp}/${stats.maxHp}`);
+        this.hudGoldText.setText(`Gold: ${stats.gold || 0}`);
 
         const hpPercent = stats.maxHp > 0 ? stats.hp / stats.maxHp : 0;
         this.hpBar.setPercent(hpPercent);

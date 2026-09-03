@@ -14,6 +14,15 @@ export const config = {
         }
     },
     scene: [], // Populated by the page that imports this config
+    // rexUI (loaded via CDN script tag in game.html, before this module
+    // runs) provides the interactive Label widget theme.js's createButton()
+    // is built on - its hit-testing/layout code is community-maintained
+    // and battle-tested, instead of hand-rolled Rectangle hit areas.
+    plugins: {
+        scene: [
+            { key: 'rexUI', plugin: window.rexuiplugin, mapping: 'rexUI' }
+        ]
+    },
     scale: {
         mode: Phaser.Scale.FIT,
         parent: 'game-container',

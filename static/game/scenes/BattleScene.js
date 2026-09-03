@@ -1,6 +1,15 @@
-import { COLORS, TEXT, createPanel, createButton, createBar, createGlowTitle } from '../theme.js';
-import { HERO_ATTACK_ANIM_KEY } from '../heroAnim.js';
+import { COLORS, TEXT, createPanel, createButton, createBar } from '../theme.js';
 import { enemyAttackAnimKey } from '../enemyAnim.js';
+
+// heroAnim.js is a relative import, invisible to game.html's top-level
+// cache-busting (window.ASSET_VERSION) - a browser that already cached an
+// older copy would keep serving those stale bytes here even after a
+// normal reload, the same issue theme.js hit earlier. Versioned dynamic
+// import dodges it for every consumer.
+const heroAnimVersion = window.ASSET_VERSION || Date.now();
+const { HERO_ATTACK_ANIM_KEY } = await import(`../heroAnim.js?v=${heroAnimVersion}`);
+
+const LIGHTNING_CRACKLE_ANIM_KEY = 'fx-lightning-crackle';
 
 // Battle Scene - Python-powered combat!
 export default class BattleScene extends Phaser.Scene {
@@ -27,9 +36,13 @@ export default class BattleScene extends Phaser.Scene {
         // reads through while staying dark enough for the battle UI text.
         const returnScene = window.gameState.battleReturnScene || 'PrintForestScene';
         const zoneBackgrounds = {
-            PrintForestScene: { textures: ['battle-forest-clearing', 'battle-forest-outcrop'], tint: null },
-            LoopForestScene: { textures: ['battle-forest-clearing', 'battle-forest-outcrop'], tint: 0x88ccff },
-            ConditionalCavernsScene: { textures: ['battle-cavern-tunnel', 'battle-cavern-crystals'], tint: null }
+            PrintForestScene: { textures: ['battle-forest-clearing', 'battle-forest-outcrop', 'battle-forest-log'], tint: null },
+            // Was a blue moonlit tint, matching Loop Forest's old blue
+            // overworld palette - that zone is now a darker green (like
+            // Print Forest, but dusk-toned), so this dims the same warm
+            // forest battle art instead of tinting it blue.
+            LoopForestScene: { textures: ['battle-forest-clearing', 'battle-forest-outcrop', 'battle-forest-log'], tint: 0x99aa88 },
+            ConditionalCavernsScene: { textures: ['battle-cavern-tunnel', 'battle-cavern-crystals', 'battle-cavern-pool'], tint: null }
         };
         const zoneBg = zoneBackgrounds[returnScene] || zoneBackgrounds.PrintForestScene;
 
@@ -37,12 +50,6 @@ export default class BattleScene extends Phaser.Scene {
         if (zoneBg.tint) bgImage.setTint(zoneBg.tint);
 
         const bg = this.add.rectangle(width / 2, height / 2, width, height, 0x000000, 0.35);
-
-        // Title
-        createGlowTitle(this, width / 2, height * 0.05, 'PYTHON BATTLE!', {
-            fontSize: Math.floor(width / 40),
-            color: TEXT.accent
-        });
 
         // Initialize battle state FIRST (before creating UI)
         this.initializeBattle();
@@ -110,9 +117,14 @@ export default class BattleScene extends Phaser.Scene {
             barWidth, barHeight, COLORS.hp
         );
 
-        // Enemy status panel - right side, aligned with player panel
-        const enemyPanelX = width * 0.85;
-        const enemyPanelY = height * 0.15;
+        // Enemy status panel - mirrors the player panel exactly (same
+        // distance from its edge, same Y) rather than an eyeballed
+        // position, so the two read as a symmetric pair. Also moved level
+        // with the player panel (was lower, at 0.15) so its bottom edge
+        // clears the taller boss sprites (crowns etc.) introduced by the
+        // +25% enemy scale bump - those were overlapping the panel.
+        const enemyPanelX = width - playerPanelX;
+        const enemyPanelY = playerPanelY;
 
         createPanel(this, enemyPanelX, enemyPanelY, panelWidth, panelHeight, {
             borderColor: COLORS.danger,
@@ -138,8 +150,20 @@ export default class BattleScene extends Phaser.Scene {
             barWidth, barHeight, COLORS.danger
         );
 
-        // Battle log - center of screen, between sprites and output
-        this.battleLog = this.add.text(width / 2, height * 0.48, '', {
+        // Shows the enemy's current status effect (burning/frozen/shocked),
+        // if any - the same value bound into `enemy["status"]` for the
+        // player's own code to read, surfaced here too so it's not a
+        // hidden mechanic.
+        this.enemyStatusText = this.add.text(enemyPanelX, enemyPanelY + panelHeight / 2 + 14, '', {
+            fontSize: smallFontSize + 'px',
+            fontFamily: 'monospace',
+            color: '#ffcc66',
+            stroke: '#000000',
+            strokeThickness: 3
+        }).setOrigin(0.5);
+
+        // Battle log - center of screen, between sprites and the code editor
+        this.battleLog = this.add.text(width / 2, height * 0.42, '', {
             fontSize: fontSize + 'px',
             fontFamily: 'monospace',
             color: TEXT.primary,
@@ -147,30 +171,36 @@ export default class BattleScene extends Phaser.Scene {
             wordWrap: { width: width * 0.7 }
         }).setOrigin(0.5);
 
-        // Python output display - positioned right above the code editor.
-        // Slightly shorter than before to leave room for the larger editor.
-        const outputY = height * 0.63;
+        // Python output display - now BELOW the code editor (input above,
+        // output below, like typing a command then reading its result), with
+        // its own terminal-green accent so it reads as distinct "stdout"
+        // rather than a second input box. Text sized 50% larger per request.
+        const outputY = height * 0.87;
         const outputWidth = width * 0.6;
-        const outputHeight = height * 0.13;
+        const outputHeight = height * 0.14;
+        this.outputY = outputY;
+
+        const outputTextColor = '#33ff99';
 
         createPanel(this, width / 2, outputY, outputWidth, outputHeight, {
-            fillColor: 0x1a1a2e,
-            borderColor: 0x444466,
+            fillColor: 0x0f1f18,
+            borderColor: 0x1fae6e,
+            borderWidth: 3,
             radius: 12
         });
 
         // Output label
-        this.add.text(width / 2 - outputWidth / 2 + 10, outputY - outputHeight / 2 - 15, '>>> Python Output:', {
-            fontSize: Math.floor(fontSize * 0.8) + 'px',
+        this.add.text(width / 2 - outputWidth / 2 + 10, outputY - outputHeight / 2 - 18, '>>> Output:', {
+            fontSize: Math.floor(fontSize * 0.8 * 1.2) + 'px',
             fontFamily: 'monospace',
-            color: TEXT.accent
+            color: outputTextColor
         });
 
         // Output text area
         this.pythonOutput = this.add.text(width / 2, outputY, '', {
-            fontSize: Math.floor(fontSize * 0.9) + 'px',
+            fontSize: Math.floor(fontSize * 0.9 * 1.5) + 'px',
             fontFamily: 'monospace',
-            color: TEXT.primary,
+            color: outputTextColor,
             align: 'left',
             wordWrap: { width: outputWidth - 20 }
         }).setOrigin(0.5);
@@ -194,7 +224,9 @@ export default class BattleScene extends Phaser.Scene {
             hp: this.enemyHP,
             maxHp: this.enemyMaxHP,
             damage: this.currentEnemy.stats?.damage || 5,
-            xp: this.currentEnemy.stats?.xp || 10
+            xp: this.currentEnemy.stats?.xp || 10,
+            status: null,
+            statusTurns: 0
         };
 
         // Player sprite - using the actual hero sprite
@@ -204,7 +236,7 @@ export default class BattleScene extends Phaser.Scene {
         // Frame 0 is the hero's idle south-facing pose (see heroAnim.js).
         // 4 would match the old single 1024px portrait's on-screen size;
         // scaled down 20% from that per request.
-        const playerScale = 3.2;
+        const playerScale = 4.0; // +25% (was 3.2)
         this.playerSprite = this.add.sprite(width * 0.25, spriteY, 'hero', 0);
         this.playerSprite.setScale(playerScale);
 
@@ -223,7 +255,7 @@ export default class BattleScene extends Phaser.Scene {
         // the scale is computed from a single frame's width, not the sheet.
         const enemyTextureKey = this.currentEnemy.sprite || 'enemy-slime';
         const enemyTextureWidth = this.textures.get(enemyTextureKey).get(0).width;
-        const enemyScale = 320 / enemyTextureWidth;
+        const enemyScale = 380 / enemyTextureWidth; // ~+19% (was 320) - trimmed slightly from +25% so boss art clears the status panel
 
         this.enemySprite = this.add.sprite(width * 0.75, spriteY, enemyTextureKey, 0);
         this.enemySprite.setScale(enemyScale);
@@ -255,26 +287,45 @@ export default class BattleScene extends Phaser.Scene {
 
     createCodeEditor() {
         const { width, height } = this.cameras.main;
-        const fontSize = Math.max(13, Math.floor(width / 115));
+        // 50% larger than before, per request, so the code you type is much
+        // easier to read.
+        const fontSize = Math.round(Math.max(13, Math.floor(width / 115)) * 1.5);
 
-        // Code editor background - scale to screen size. Stored on the
-        // instance (rather than recomputed) so updateCodeDisplay() and
+        // Code editor is now ABOVE the output panel (input first, then its
+        // result below) - scale to screen size. Stored on the instance
+        // (rather than recomputed) so updateCodeDisplay() and
         // showCodeHint() can't drift out of sync with these values.
         const editorWidth = width * 0.78;
-        const editorHeight = height * 0.22;
+        const editorHeight = height * 0.26;
         const editorX = width / 2;
-        const editorY = height * 0.84;
+        const editorY = height * 0.63;
         this.editorWidth = editorWidth;
         this.editorHeight = editorHeight;
         this.editorX = editorX;
         this.editorY = editorY;
         this.editorFontSize = fontSize;
         this.editorLeftEdge = editorX - editorWidth / 2;
+        this.editorCodeTopOffset = 40; // titleBarHeight (26) + 14px padding below it
 
         const editorPanel = createPanel(this, editorX, editorY, editorWidth, editorHeight, {
-            fillColor: 0x1e1e1e,
+            fillColor: 0x14141f,
             borderColor: COLORS.accent,
+            borderWidth: 3,
             radius: 14
+        });
+
+        // A small terminal-style title bar strip across the top of the
+        // editor, with traffic-light dots, so it visually reads as its own
+        // "input" console distinct from the green output console below it.
+        const titleBarHeight = 26;
+        const titleBarY = editorY - editorHeight / 2 + titleBarHeight / 2;
+        const titleBar = this.add.graphics();
+        titleBar.fillStyle(0x0a0a12, 1);
+        titleBar.fillRoundedRect(editorX - editorWidth / 2, editorY - editorHeight / 2, editorWidth, titleBarHeight, { tl: 14, tr: 14, bl: 0, br: 0 });
+        const dotColors = [0xff5f56, 0xffbd2e, 0x27c93f];
+        dotColors.forEach((c, i) => {
+            titleBar.fillStyle(c, 1);
+            titleBar.fillCircle(editorX - editorWidth / 2 + 16 + i * 16, titleBarY, 5);
         });
 
         // A separate pulsing glow ring to signal it's the player's turn
@@ -290,14 +341,15 @@ export default class BattleScene extends Phaser.Scene {
         });
 
         // Editor title
-        const editorTitle = this.add.text(editorX - editorWidth / 2 + 10, editorY - editorHeight / 2 - 20, '>>> Python Code Editor', {
-            fontSize: fontSize + 'px',
+        const editorTitle = this.add.text(editorX - editorWidth / 2 + 60, titleBarY, '>>> Python Code Editor', {
+            fontSize: Math.floor(fontSize * 0.7) + 'px',
             fontFamily: 'monospace',
             color: TEXT.accent
-        });
+        }).setOrigin(0, 0.5);
 
-        // Code display area
-        this.codeText = this.add.text(editorX - editorWidth / 2 + 20, editorY - editorHeight / 2 + 10, '', {
+        // Code display area - pushed down below the new title bar
+        const codeTop = editorY - editorHeight / 2 + this.editorCodeTopOffset;
+        this.codeText = this.add.text(editorX - editorWidth / 2 + 20, codeTop, '', {
             fontSize: fontSize + 'px',
             fontFamily: 'monospace',
             color: TEXT.primary,
@@ -310,7 +362,7 @@ export default class BattleScene extends Phaser.Scene {
         this.cursorVisible = true;
 
         // Create blinking cursor - adjusted position
-        this.cursor = this.add.text(editorX - editorWidth / 2 + 20, editorY - editorHeight / 2 + 10, '|', {
+        this.cursor = this.add.text(editorX - editorWidth / 2 + 20, codeTop, '|', {
             fontSize: fontSize + 'px',
             fontFamily: 'monospace',
             color: TEXT.accent
@@ -327,7 +379,7 @@ export default class BattleScene extends Phaser.Scene {
         });
 
         // Track every editor element so it can be hidden together later
-        this.codeEditorElements = [editorPanel, editorGlow, editorTitle, this.codeText, this.cursor];
+        this.codeEditorElements = [editorPanel, titleBar, editorGlow, editorTitle, this.codeText, this.cursor];
 
         // Set up keyboard input
         this.setupKeyboardInput();
@@ -345,24 +397,28 @@ export default class BattleScene extends Phaser.Scene {
         const buttonWidth = width * 0.12;
         const buttonHeight = height * 0.045;
         const buttonY = height * 0.97;
+        // Centered as a group (evenly spaced, straddling width*0.5) rather
+        // than the earlier eyeballed 0.35-0.86 spread, which wasn't
+        // centered on screen.
+        this.actionButtonSpacing = 0.17;
+        const xs = [-1.5, -0.5, 0.5, 1.5].map(n => width * (0.5 + n * this.actionButtonSpacing));
 
-        const runButton = createButton(this, width * 0.35, buttonY, buttonWidth, buttonHeight, 'Run Code', {
-            fillColor: COLORS.success,
-            hoverColor: COLORS.successHover,
+        // Carved wood-and-bronze "fantasy RPG" menu buttons - matches the
+        // game's JRPG framing instead of a neon/cyberpunk terminal look.
+        const runButton = createButton(this, xs[0], buttonY, buttonWidth, buttonHeight, 'Run Code', {
+            variant: 'fantasy',
             fontSize: Math.max(14, Math.floor(width / 100)),
             onClick: () => this.executeCode()
         });
 
-        const helpButton = createButton(this, width * 0.52, buttonY, buttonWidth, buttonHeight, 'Help', {
-            fillColor: COLORS.info,
-            hoverColor: COLORS.infoHover,
+        const helpButton = createButton(this, xs[1], buttonY, buttonWidth, buttonHeight, 'Help', {
+            variant: 'fantasy',
             fontSize: Math.max(14, Math.floor(width / 100)),
             onClick: () => this.showHelp()
         });
 
-        const clearButton = createButton(this, width * 0.69, buttonY, buttonWidth, buttonHeight, 'Clear', {
-            fillColor: COLORS.warning,
-            hoverColor: COLORS.warningHover,
+        const clearButton = createButton(this, xs[2], buttonY, buttonWidth, buttonHeight, 'Clear', {
+            variant: 'fantasy',
             fontSize: Math.max(14, Math.floor(width / 100)),
             onClick: () => {
                 this.userCode = '';
@@ -371,7 +427,74 @@ export default class BattleScene extends Phaser.Scene {
             }
         });
 
-        this.codeEditorElements.push(runButton, helpButton, clearButton);
+        // Everything that happens in battle - attacking, using an item,
+        // fleeing - is a line of code (use_item(...), flee()), not a
+        // button. This just lets you glance back at commands you've
+        // already run, same idea as shell history.
+        const historyButton = createButton(this, xs[3], buttonY, buttonWidth, buttonHeight, 'History', {
+            variant: 'fantasy',
+            fontSize: Math.max(14, Math.floor(width / 100)),
+            onClick: () => this.toggleHistoryMenu()
+        });
+
+        this.codeEditorElements.push(runButton, helpButton, clearButton, historyButton);
+    }
+
+    // Shows/hides a small panel listing every command run so far this
+    // battle (this.codeHistory, already kept for Up/Down recall). Clicking
+    // an entry loads it back into the editor rather than re-running it
+    // outright - still a manual "Run Code" away, like recalling a shell
+    // history line.
+    toggleHistoryMenu() {
+        if (this.historyMenuElements) {
+            this.historyMenuElements.forEach(el => el.destroy());
+            this.historyMenuElements = null;
+            return;
+        }
+
+        const { width, height } = this.cameras.main;
+        const entries = (this.codeHistory || []).slice(-8).reverse();
+
+        const panelWidth = width * 0.26;
+        const rowHeight = 44;
+        const rowButtonHeight = 34;
+        const rowHitSlop = 4;
+        const panelHeight = Math.max(rowHeight, entries.length * rowHeight) + 30;
+        // Anchored above the History button itself, wherever the
+        // (centered) action button row places it, rather than a
+        // hardcoded x that would drift out of sync with it.
+        const panelX = width * (0.5 + 1.5 * this.actionButtonSpacing);
+        const panelY = height * 0.97 - height * 0.045 / 2 - panelHeight / 2 - 12;
+
+        const elements = [createPanel(this, panelX, panelY, panelWidth, panelHeight, { radius: 12 })];
+
+        if (entries.length === 0) {
+            elements.push(this.add.text(panelX, panelY, 'No commands run yet', {
+                fontSize: '13px', fontFamily: 'monospace', color: TEXT.secondary
+            }).setOrigin(0.5));
+        } else {
+            const top = panelY - panelHeight / 2 + rowHeight / 2 + 5;
+            entries.forEach((entry, i) => {
+                const label = entry.length > 28 ? entry.slice(0, 27) + '…' : entry;
+                elements.push(createButton(this, panelX, top + i * rowHeight, panelWidth - 20, rowButtonHeight,
+                    label.replace(/\n/g, ' '), {
+                        fillColor: COLORS.info,
+                        hoverColor: COLORS.infoHover,
+                        hitSlop: rowHitSlop,
+                        fontSize: 12,
+                        onClick: () => {
+                            this.userCode = entry;
+                            this.cursorPos = entry.length;
+                            this.historyIndex = null;
+                            this.updateCodeDisplay();
+                            this.historyMenuElements.forEach(el => el.destroy());
+                            this.historyMenuElements = null;
+                        }
+                    }));
+            });
+        }
+
+        this.historyMenuElements = elements;
     }
 
     initializeBattle() {
@@ -393,6 +516,14 @@ export default class BattleScene extends Phaser.Scene {
         // Battle state
         this.isPlayerTurn = true;
         this.battleEnded = false;
+
+        // Concept-gated boss mechanics: Boss: Syntax Error hits harder the
+        // more consecutive turns you fail (mistakeStreak), and Boss:
+        // Unhandled Exception hits harder unless your last turn's code
+        // actually used try/except (usedTryExceptLastTurn). Both are no-ops
+        // against every other enemy - see enemyTurn().
+        this.mistakeStreak = 0;
+        this.usedTryExceptLastTurn = null;
     }
 
     getCodeExamples() {
@@ -579,7 +710,7 @@ export default class BattleScene extends Phaser.Scene {
         const charWidth = this.editorFontSize * 0.6; // Approximate character width
         const lineHeight = this.editorFontSize * 1.3; // Line height
         const baseX = this.editorX - this.editorWidth / 2 + 20;
-        const baseY = this.editorY - this.editorHeight / 2 + 10;
+        const baseY = this.editorY - this.editorHeight / 2 + this.editorCodeTopOffset;
 
         // Figure out which visual line/column the cursor sits on by counting
         // newlines up to it, so it can be placed anywhere in the text
@@ -685,6 +816,11 @@ export default class BattleScene extends Phaser.Scene {
         // The hint text is replaced (not re-pushed) each turn, so hide it separately
         if (this.hintLabelText) this.hintLabelText.setVisible(false);
         if (this.hintCodeText) this.hintCodeText.setVisible(false);
+
+        if (this.historyMenuElements) {
+            this.historyMenuElements.forEach(element => element.destroy());
+            this.historyMenuElements = null;
+        }
     }
 
     executeCode() {
@@ -714,22 +850,97 @@ export default class BattleScene extends Phaser.Scene {
                 'Content-Type': 'application/json',
                 'X-CSRFToken': window.CSRF_TOKEN || ''
             },
-            body: JSON.stringify({ code: code })
+            body: JSON.stringify({
+                code: code,
+                // Concept-gated boss mechanics + the inspectable `enemy`
+                // dict both need to know which boss (if any) this is and
+                // the enemy's current state - see api_views.py's
+                // execute_python_code().
+                boss_id: this.currentEnemy?.id || null,
+                enemy: {
+                    name: this.currentEnemy?.name || null,
+                    hp: this.enemyHP,
+                    max_hp: this.enemyMaxHP,
+                    status: this.enemyStats.status || null
+                }
+            })
         })
         .then(response => response.json())
         .then(result => {
             if (result.success) {
                 // Show the output
                 this.pythonOutput.setText(result.output || 'Code executed (no output)');
-                this.battleLog.setText('Code executed successfully!');
-
-                // Use the damage calculated by the server
-                let damage = result.damage;
 
                 // Clear the editor for next turn
                 this.userCode = '';
                 this.cursorPos = 0;
                 this.updateCodeDisplay();
+
+                if (result.action === 'inspect') {
+                    // Referenced `inventory` (e.g. print(inventory)) without
+                    // actually using anything - free look, still your turn.
+                    this.battleLog.setText('Just looking - still your turn!');
+                    return;
+                }
+
+                if (result.action === 'flee') {
+                    this.isPlayerTurn = false;
+                    if (result.flee_success) {
+                        this.battleLog.setText('Got away safely!');
+                        this.hideCodeEditor();
+                        this.time.delayedCall(1200, () => this.escapeBattle());
+                    } else {
+                        this.battleLog.setText("Couldn't escape!");
+                        this.time.delayedCall(1200, () => this.enemyTurn());
+                    }
+                    return;
+                }
+
+                if (result.action === 'item') {
+                    // use_item() succeeded - this turn was spent healing,
+                    // not attacking. Apply the server-computed HP/MP and
+                    // inventory change, then it's the enemy's turn, same as
+                    // any other action. Locked immediately (like
+                    // playerAttack() does) so the 1.5s delay before the
+                    // enemy's turn can't be used to sneak in another action.
+                    this.isPlayerTurn = false;
+                    window.gameState.setInventoryAndStats(result.inventory, result.player);
+                    this.playerHP = result.player.current_hp;
+                    this.playerMP = result.player.current_mp;
+                    this.playerStats.hp = this.playerHP;
+                    this.playerStats.mp = this.playerMP;
+                    this.updatePlayerHP();
+                    this.updatePlayerMP();
+                    this.battleLog.setText('Used an item!');
+                    this.time.delayedCall(1500, () => this.enemyTurn());
+                    return;
+                }
+
+                // Boss: Unhandled Exception cares about *this* turn's code
+                // for its *next* retaliation - stored regardless of boss,
+                // harmless (and unread) against anything else.
+                this.usedTryExceptLastTurn = result.used_try_except;
+
+                // Use the damage calculated by the server
+                let damage = result.damage;
+
+                // Boss: Syntax Error feeds on consecutive failed/wasted
+                // turns - a real attack (damage > 0) resets the streak,
+                // a trapped one (Boss: Infinite Loop Tree's gimmick, or
+                // any other 0-damage run) extends it.
+                this.mistakeStreak = damage > 0 ? 0 : this.mistakeStreak + 1;
+
+                let logText = result.boss_note || 'Code executed successfully!';
+                if (result.synergy_bonus) logText += ' Exploiting its status paid off!';
+                this.battleLog.setText(logText);
+
+                if (damage === 0 && result.boss_note) {
+                    // Trapped (Boss: Infinite Loop Tree) - no attack lands
+                    // at all, straight to the enemy's turn, same as any
+                    // other wasted turn.
+                    this.time.delayedCall(1500, () => this.enemyTurn());
+                    return;
+                }
 
                 // Player attacks after showing message
                 const spellText = `${code} ${result.output || ''}`;
@@ -740,6 +951,7 @@ export default class BattleScene extends Phaser.Scene {
                 // Show the error
                 this.pythonOutput.setText(result.error || 'Unknown error');
                 this.battleLog.setText('Error! No damage dealt!');
+                this.mistakeStreak++;
                 this.time.delayedCall(1500, () => this.enemyTurn());
             }
         })
@@ -808,6 +1020,16 @@ export default class BattleScene extends Phaser.Scene {
                 this.enemyStats.hp = this.enemyHP;
                 this.updateEnemyHP();
                 this.showDamageNumber(this.enemySprite.x, this.enemySprite.y, damage, '#ffdd55');
+
+                // Elemental spells inflict a status the enemy dict exposes
+                // to your code (see executeCode()'s request body) - not
+                // just a bigger number, something to actually branch on
+                // next turn (`if enemy["status"] == "frozen": ...`).
+                if (element) {
+                    this.enemyStats.status = { fire: 'burning', ice: 'frozen', thunder: 'shocked' }[element];
+                    this.enemyStats.statusTurns = 2;
+                    this.updateEnemyStatusText();
+                }
 
                 // Shake enemy
                 this.tweens.add({
@@ -897,24 +1119,29 @@ export default class BattleScene extends Phaser.Scene {
             const boltScale = boltHeight / 161;
             const midY = (topY + bottomY) / 2;
 
-            // Soft glow layer behind the crisp bolt for extra punch
+            // Soft glow layer behind the crisp, actually-animated crackling
+            // bolt (a real 5-frame spritesheet, not a static image with a
+            // hand-timed alpha flicker) for extra punch
+            if (!this.anims.exists(LIGHTNING_CRACKLE_ANIM_KEY)) {
+                this.anims.create({
+                    key: LIGHTNING_CRACKLE_ANIM_KEY,
+                    frames: this.anims.generateFrameNumbers('fx-lightning', { start: 0, end: 4 }),
+                    frameRate: 14,
+                    repeat: -1
+                });
+            }
+
             const boltGlow = this.add.sprite(x, midY, 'fx-lightning')
                 .setScale(boltScale * 1.7)
                 .setAlpha(0.4)
                 .setTint(0xaaddff);
+            boltGlow.play(LIGHTNING_CRACKLE_ANIM_KEY);
 
             const bolt = this.add.sprite(x, midY, 'fx-lightning').setScale(boltScale);
+            bolt.play(LIGHTNING_CRACKLE_ANIM_KEY);
 
             this.cameras.main.flash(220, 255, 255, 220);
             onStrike();
-
-            // A quick flicker gives the bolt a bit more electric life
-            this.time.delayedCall(150, () => {
-                if (bolt.active) { bolt.setAlpha(0.25); boltGlow.setAlpha(0.1); }
-            });
-            this.time.delayedCall(230, () => {
-                if (bolt.active) { bolt.setAlpha(1); boltGlow.setAlpha(0.4); }
-            });
 
             [bolt, boltGlow].forEach(g => {
                 this.tweens.add({
@@ -997,9 +1224,58 @@ export default class BattleScene extends Phaser.Scene {
             this.pythonOutput.setText('');
         }
 
+        // Status effects inflicted by the player's last elemental spell
+        // (see playerAttack()) - burning ticks damage right now, frozen
+        // weakens this attack, shocked has a real chance to skip it
+        // outright. Duration counts down at the end of this method
+        // regardless of which (if any) status is active.
+        const status = this.enemyStats.status;
+
+        if (status === 'burning') {
+            const burnDamage = Math.max(1, Math.round(this.enemyMaxHP * 0.06));
+            this.enemyHP = Math.max(0, this.enemyHP - burnDamage);
+            this.enemyStats.hp = this.enemyHP;
+            this.updateEnemyHP();
+            this.showDamageNumber(this.enemySprite.x, this.enemySprite.y, burnDamage, '#ff8833');
+            if (this.enemyHP <= 0) {
+                this.tickStatusDuration();
+                this.victory();
+                return;
+            }
+        }
+
+        if (status === 'shocked' && Math.random() < 0.6) {
+            this.battleLog.setText('Enemy is shocked and can\'t move!');
+            this.tickStatusDuration();
+            this.time.delayedCall(1500, () => {
+                this.isPlayerTurn = true;
+                this.battleLog.setText('Your turn! Write more Python code!');
+                this.userCode = '';
+                this.cursorPos = 0;
+                this.updateCodeDisplay();
+                this.showCodeHint();
+            });
+            return;
+        }
+
         // Defense stat reduces incoming damage, floor of 1
         const defenseReduction = Math.floor((this.playerStats.defense || 5) / 3);
-        const damage = Math.max(1, (this.enemyStats.damage || 5) - defenseReduction);
+        let damage = Math.max(1, (this.enemyStats.damage || 5) - defenseReduction);
+
+        if (status === 'frozen') damage = Math.max(1, Math.round(damage * 0.6));
+
+        // Concept-gated boss mechanics: Boss: Syntax Error hits harder the
+        // longer you've been failing/wasting turns; Boss: Unhandled
+        // Exception hits harder unless your last turn's code actually used
+        // try/except. No-ops against every other enemy.
+        if (this.currentEnemy.id === 'boss1' && this.mistakeStreak > 0) {
+            damage = Math.round(damage * (1 + 0.4 * Math.min(this.mistakeStreak, 3)));
+        }
+        if (this.currentEnemy.id === 'boss3' && this.usedTryExceptLastTurn === false) {
+            damage = Math.round(damage * 1.5);
+        }
+
+        this.tickStatusDuration();
         this.battleLog.setText(`Enemy attacks! You take ${damage} damage!`);
 
         // Enemy lunges toward the player; impact lands at the peak of the lunge
@@ -1019,37 +1295,93 @@ export default class BattleScene extends Phaser.Scene {
         });
 
         this.time.delayedCall(270, () => {
-            // Flash red
-            this.cameras.main.flash(100, 255, 0, 0);
+            // The attack itself travels from the enemy to the player -
+            // same traveling-projectile idea as the player's own fireball
+            // spell - and the hit only actually lands once it arrives,
+            // instead of damage applying the instant the enemy lunges.
+            this.showEnemyProjectile(this.enemySprite.x, this.enemySprite.y, this.playerSprite.x, this.playerSprite.y, () => {
+                // Damage player
+                this.playerHP = Math.max(0, this.playerHP - damage);
+                this.playerStats.hp = this.playerHP;
+                this.updatePlayerHP();
+                window.gameState.updatePlayerStats({ hp: this.playerHP });
+                this.showDamageNumber(this.playerSprite.x, this.playerSprite.y, damage, '#ff4444');
 
-            // Damage player
-            this.playerHP = Math.max(0, this.playerHP - damage);
-            this.playerStats.hp = this.playerHP;
-            this.updatePlayerHP();
-            window.gameState.updatePlayerStats({ hp: this.playerHP });
-            this.showDamageNumber(this.playerSprite.x, this.playerSprite.y, damage, '#ff4444');
-
-            // Shake player
-            this.tweens.add({
-                targets: this.playerSprite,
-                x: this.playerSprite.x - 10,
-                duration: 50,
-                yoyo: true,
-                repeat: 3
-            });
-
-            // Check if player defeated
-            if (this.playerHP <= 0) {
-                this.defeat();
-            } else {
-                this.time.delayedCall(1500, () => {
-                    this.isPlayerTurn = true;
-                    this.battleLog.setText('Your turn! Write more Python code!');
-                    this.userCode = '';
-                    this.cursorPos = 0;
-                    this.updateCodeDisplay();
-                    this.showCodeHint();
+                // Shake player
+                this.tweens.add({
+                    targets: this.playerSprite,
+                    x: this.playerSprite.x - 10,
+                    duration: 50,
+                    yoyo: true,
+                    repeat: 3
                 });
+
+                // Check if player defeated
+                if (this.playerHP <= 0) {
+                    this.defeat();
+                } else {
+                    this.time.delayedCall(1500, () => {
+                        this.isPlayerTurn = true;
+                        this.battleLog.setText('Your turn! Write more Python code!');
+                        this.userCode = '';
+                        this.cursorPos = 0;
+                        this.updateCodeDisplay();
+                        this.showCodeHint();
+                    });
+                }
+            });
+        });
+    }
+
+    // A dark bolt thrown by the enemy flies across the screen to the
+    // player, then bursts - the enemy-attack counterpart to showFireball(),
+    // so incoming attacks read as something that travels and connects
+    // rather than an instant, teleporting hit.
+    showEnemyProjectile(fromX, fromY, toX, toY, onImpact = () => {}) {
+        const scale = 0.4;
+        const glow = this.add.sprite(fromX, fromY, 'spell-effect').setScale(scale * 1.6).setAlpha(0.5).setTint(0xff3355);
+        const bolt = this.add.sprite(fromX, fromY, 'spell-effect').setScale(scale).setTint(0x8a1f36);
+
+        // A flatter, faster arc than the player's lobbed fireball - this
+        // is a monster striking at you, not a carefully cast spell.
+        const arcHeight = 50;
+        const curve = new Phaser.Curves.QuadraticBezier(
+            new Phaser.Math.Vector2(fromX, fromY),
+            new Phaser.Math.Vector2((fromX + toX) / 2, Math.min(fromY, toY) - arcHeight),
+            new Phaser.Math.Vector2(toX, toY)
+        );
+
+        const progress = { t: 0 };
+        this.tweens.add({
+            targets: progress,
+            t: 1,
+            duration: 380,
+            ease: 'Sine.easeIn',
+            onUpdate: () => {
+                const point = curve.getPoint(progress.t);
+                bolt.setPosition(point.x, point.y);
+                glow.setPosition(point.x, point.y);
+                bolt.rotation = progress.t * -0.6;
+            },
+            onComplete: () => {
+                this.cameras.main.flash(100, 255, 0, 0);
+                onImpact();
+
+                for (let i = 0; i < 6; i++) {
+                    const angle = (i / 6) * Math.PI * 2;
+                    const spark = this.add.circle(toX, toY, 5, 0xff3355, 1);
+                    this.tweens.add({
+                        targets: spark,
+                        x: toX + Math.cos(angle) * 35,
+                        y: toY + Math.sin(angle) * 35,
+                        alpha: 0,
+                        duration: 300,
+                        onComplete: () => spark.destroy()
+                    });
+                }
+
+                bolt.destroy();
+                glow.destroy();
             }
         });
     }
@@ -1250,11 +1582,24 @@ export default class BattleScene extends Phaser.Scene {
             '• Loops, if/def, f-strings & variables\n' +
             '  each add a bit of bonus damage\n' +
             '• Print "Fire", "Ice" or "Thunder" to cast\n' +
-            '  a spell - costs 8 MP, hits much harder\n' +
+            '  a spell - costs 8 MP, hits much harder,\n' +
+            '  and inflicts a status: burning/frozen/\n' +
+            '  shocked. Check enemy["status"] in code!\n' +
             '• Errors deal 0 damage - fix and retry!\n\n' +
+            'use_item(inventory, "Health Potion") heals\n' +
+            'and spends the turn. print(inventory) just\n' +
+            'looks - free, still your turn.\n\n' +
+            'flee() tries to escape - about a 65%\n' +
+            'chance. Fails cost the turn too!\n\n' +
+            'Bosses fight back with their own theme:\n' +
+            'Syntax Error hits harder the longer you\n' +
+            'keep failing. Unhandled Exception hits\n' +
+            'harder unless you used try/except.\n' +
+            'Infinite Loop Tree traps a while True\n' +
+            'with no break - it never lands at all.\n\n' +
             'Click anywhere to close';
 
-        const helpBg = createPanel(this, width / 2, height / 2, 620, 420, { radius: 18, borderColor: COLORS.accent });
+        const helpBg = createPanel(this, width / 2, height / 2, 640, 560, { radius: 18, borderColor: COLORS.accent });
         const help = this.add.text(width / 2, height / 2, helpText, {
             fontSize: '16px',
             fontFamily: 'monospace',
@@ -1263,7 +1608,11 @@ export default class BattleScene extends Phaser.Scene {
             wordWrap: { width: 550 }
         }).setOrigin(0.5);
 
-        const closeZone = this.add.rectangle(width / 2, height / 2, 620, 420, 0x000000, 0);
+        // Covers the whole screen, not just the dialog's own box - the text
+        // says "click anywhere to close" so clicking the battle scene
+        // behind/around the dialog (not just the dialog itself) needs to
+        // actually close it too.
+        const closeZone = this.add.rectangle(width / 2, height / 2, width, height, 0x000000, 0);
         closeZone.setInteractive().on('pointerdown', () => {
             helpBg.destroy();
             help.destroy();
@@ -1271,13 +1620,20 @@ export default class BattleScene extends Phaser.Scene {
         });
     }
 
-    fleeBattle() {
-        if (this.battleEnded) return;
+    // A successful flee() ends the fight with no reward and no penalty -
+    // just back to whichever zone the battle started from, same
+    // returnScene lookup victory() uses.
+    escapeBattle() {
+        this.battleEnded = true;
+        this.returnScene = window.gameState.battleReturnScene || 'PrintForestScene';
 
-        this.battleLog.setText("Can't escape! This is a tutorial battle!");
+        window.gameState.updatePlayerStats({ hp: this.playerHP, mp: this.playerMP });
 
-        // Simple shake effect on the whole scene
-        this.cameras.main.shake(200, 0.005);
+        this.cameras.main.fade(500, 0, 0, 0);
+        this.time.delayedCall(500, () => {
+            this.scene.stop('UIScene');
+            this.scene.start(this.returnScene);
+        });
     }
 
     updatePlayerHP() {
@@ -1306,5 +1662,24 @@ export default class BattleScene extends Phaser.Scene {
         if (this.enemyHPText) {
             this.enemyHPText.setText(`${this.currentEnemy.name}: ${this.enemyHP}/${this.enemyMaxHP}`);
         }
+    }
+
+    updateEnemyStatusText() {
+        if (!this.enemyStatusText) return;
+        const labels = { burning: '\u{1F525} Burning', frozen: '\u{2744}\u{FE0F} Frozen', shocked: '\u{26A1} Shocked' };
+        this.enemyStatusText.setText(labels[this.enemyStats.status] || '');
+    }
+
+    // Counts down the enemy's status effect by one enemy turn, clearing it
+    // once expired. Called once per enemyTurn() regardless of which (if
+    // any) status is active.
+    tickStatusDuration() {
+        if (!this.enemyStats.status) return;
+        this.enemyStats.statusTurns--;
+        if (this.enemyStats.statusTurns <= 0) {
+            this.enemyStats.status = null;
+            this.enemyStats.statusTurns = 0;
+        }
+        this.updateEnemyStatusText();
     }
 }

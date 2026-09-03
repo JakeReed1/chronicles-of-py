@@ -46,6 +46,32 @@ export function createHeroAnimations(scene) {
     });
 }
 
+export function heroRunAnimKey(direction) {
+    return 'run-' + direction;
+}
+
+// The hero_run.png spritesheet (PixelLab running-8-frames template on the
+// same character/rig as the walk sheet) is its own 128x128 grid, 8 columns
+// (directions, same left-to-right order as HERO_DIRECTIONS) x 8 rows (run
+// frames 0-7) - no idle row, unlike hero_walk.png, since running never
+// holds an idle pose.
+export function createHeroRunAnimations(scene) {
+    if (scene.anims.exists(heroRunAnimKey('south'))) return;
+
+    HERO_DIRECTIONS.forEach((dir, col) => {
+        const frames = [];
+        for (let f = 0; f < 8; f++) {
+            frames.push({ key: 'hero-run', frame: f * 8 + col });
+        }
+        scene.anims.create({
+            key: heroRunAnimKey(dir),
+            frames,
+            frameRate: 14,
+            repeat: -1
+        });
+    });
+}
+
 export const HERO_ATTACK_ANIM_KEY = 'attack-hero';
 
 // The battle-only attack animation lives on its own 'hero-attack' texture

@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from apps.characters.models import Player, Enemy
+from apps.characters.models import Player, Enemy, PlayerInventory
 from apps.battles.models import Battle
 from apps.world.models import Location, Quest
 from apps.lessons.models import Lesson, Challenge
@@ -19,15 +19,28 @@ class BattleParticipantSerializer(serializers.ModelSerializer):
 class PlayerSerializer(serializers.ModelSerializer):
     """Serializer for Player model"""
     username = serializers.CharField(source='user.username', read_only=True)
-    
+
     class Meta:
         model = Player
         fields = [
             'id', 'username', 'name', 'level', 'experience',
             'max_hp', 'current_hp', 'max_mp', 'current_mp',
-            'attack', 'defense', 'gold', 'created_at'
+            'attack', 'defense', 'magic_attack', 'magic_defense', 'speed',
+            'skill_points', 'gold', 'created_at'
         ]
         read_only_fields = ['created_at']
+
+
+class PlayerInventorySerializer(serializers.ModelSerializer):
+    """Serializer for a single inventory row - flattens the related GameItem's
+    name/type onto the row rather than nesting, matching the plain
+    {name, type, quantity} shape the inventory code console works with."""
+    name = serializers.CharField(source='item.name', read_only=True)
+    type = serializers.CharField(source='item.item_type', read_only=True)
+
+    class Meta:
+        model = PlayerInventory
+        fields = ['id', 'name', 'type', 'quantity', 'is_equipped', 'equipment_slot']
 
 
 class EnemySerializer(serializers.ModelSerializer):

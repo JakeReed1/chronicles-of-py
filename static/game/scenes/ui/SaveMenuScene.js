@@ -83,6 +83,7 @@ export default class SaveMenuScene extends Phaser.Scene {
         // above is what's actually visible.
         const bg = this.add.rectangle(0, 0, slotWidth, slotHeight, 0x000000, 0);
         bg.setInteractive({ useHandCursor: true });
+        container.bg = bg; // so confirmDelete() can disable it while its dialog is open
 
         container.add([panelGraphic, bg]);
 
@@ -139,6 +140,7 @@ export default class SaveMenuScene extends Phaser.Scene {
                 });
 
                 container.add(deleteBtn);
+                container.deleteBtn = deleteBtn;
             }
         } else {
             const emptyText = this.add.text(0, 0,
@@ -301,6 +303,17 @@ export default class SaveMenuScene extends Phaser.Scene {
     confirmDelete(slotNumber) {
         const { width, height } = this.cameras.main;
 
+        // The dialog can land on top of a save slot near screen center
+        // (its Yes/No buttons overlapped slot 4's whole clickable row by
+        // 170x80px) - without disabling the slots underneath, confirming
+        // or cancelling a delete could also fire that slot's own click
+        // handler (renaming/loading it).
+        const disabledSlots = Object.values(this.slotContainers).filter(c => c.bg && c.bg.input && c.bg.input.enabled);
+        disabledSlots.forEach(c => {
+            c.bg.disableInteractive();
+            if (c.deleteBtn) c.deleteBtn.disableInteractive();
+        });
+
         const dialog = createPanel(this, width / 2, height / 2, 420, 190, {
             radius: 16,
             borderColor: COLORS.danger
@@ -312,7 +325,9 @@ export default class SaveMenuScene extends Phaser.Scene {
             color: '#ff6b6b'
         }).setOrigin(0.5);
 
-        const yesBtn = createButton(this, width / 2 - 80, height / 2 + 35, 130, 50, 'Yes', {
+        // width 130 + 2*20 hit-slop = 170px minimum spacing to not overlap -
+        // these were only 160 apart (10px overlap); 200 leaves real room.
+        const yesBtn = createButton(this, width / 2 - 100, height / 2 + 35, 130, 50, 'Yes', {
             fillColor: COLORS.danger,
             hoverColor: COLORS.dangerHover,
             onClick: () => {
@@ -321,7 +336,7 @@ export default class SaveMenuScene extends Phaser.Scene {
             }
         });
 
-        const noBtn = createButton(this, width / 2 + 80, height / 2 + 35, 130, 50, 'No', {
+        const noBtn = createButton(this, width / 2 + 100, height / 2 + 35, 130, 50, 'No', {
             fillColor: COLORS.neutral,
             hoverColor: COLORS.neutralHover,
             onClick: () => {
@@ -329,6 +344,10 @@ export default class SaveMenuScene extends Phaser.Scene {
                 text.destroy();
                 yesBtn.destroy();
                 noBtn.destroy();
+                disabledSlots.forEach(c => {
+                    c.bg.setInteractive();
+                    if (c.deleteBtn) c.deleteBtn.setInteractive();
+                });
             }
         });
     }
